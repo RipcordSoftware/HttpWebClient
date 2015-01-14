@@ -52,3 +52,4 @@ Differences and Missing Parts
 -------------
 * Exceptions are derived from `HttpWebClientException`/ApplicationException and not from the `System.Net` exception types
 * There is currently no support for SSL
+* `HttpWebRequest.GetResponse()` takes an optional bool parameter which disables exception throws on HTTP 'error' codes. So on 404 or 500 you can get the response and handle it without needing exception plumbing.
