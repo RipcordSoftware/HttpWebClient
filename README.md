@@ -16,6 +16,37 @@ xbuild HttpWebClient.sln
 ```
 To build in release mode execute xbuild with the additional parameter: /p:configuration=Release.
 
+Example
+-------
+The following example code requests the RFC2616 text file from the IETF web site. The example is very similar to .NETs HttpWebRequest/HttpWebResponse implementation style.
+```c#
+public static void Main(string[] args)
+{
+    try
+    {
+        var request = new HttpWebClientRequest(@"http://www.ietf.org/rfc/rfc2616.txt");
+
+        using (var response = request.GetResponse())
+        {
+            if (response.StatusCode == (int)HttpWebClientStatusCode.OK)
+            {
+                using (var responseStream = response.GetResponseStream())
+                {
+                    using (var stream = new StreamReader(responseStream))
+                    {
+                        var body = stream.ReadToEnd();
+                        Console.WriteLine(body);
+                    }
+                }
+            }
+        }
+    }
+    catch (HttpWebClientException ex)
+    {
+        Console.WriteLine("ERROR: " + ex.Message);
+    }
+}
+```
 
 Differences and Missing Parts
 -------------
