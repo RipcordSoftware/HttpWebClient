@@ -8,10 +8,16 @@ The HttpWebClient is a C# HTTP Web Client implementation designed to drop-in rep
 
 HttpWebClient runs under Mono 3.x and .NET 4.5 and above.
 
-# Building
-
+Building
+--------
 Build from MonoDevelop or from the command line:
 ```shell
 xbuild HttpWebClient.sln
 ```
 To build in release mode execute xbuild with the additional parameter: /p:configuration=Release.
+
+
+Differences and Missing Parts
+-------------
+* Exceptions are derived from `HttpWebClientException`/ApplicationException and not from the `System.Net` exception types
+* There is currently no support for SSL
