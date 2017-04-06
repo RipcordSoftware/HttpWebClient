@@ -205,7 +205,7 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientChunkedResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Constants
-        private int maxResponseChunkSize = 32768;
+        private int maxResponseChunkSize = 256 * 1024;
         #endregion
 
         #region Types
@@ -415,16 +415,14 @@ namespace RipcordSoftware.HttpWebClient
 
                 if (chunkHeader.BlockSize > 0)
                 {
-                    chunkStream = new MemoryStream(chunkHeader.BlockSize);
-                    var chunkBuffer = chunkStream.GetBuffer();
+                    var chunkBuffer = new byte[chunkHeader.BlockSize];
+                    chunkStream = new MemoryStream(chunkBuffer);
 
                     int bytesRead = 0;
                     do
                     {
                         bytesRead += stream.Read(chunkBuffer, bytesRead, chunkHeader.BlockSize - bytesRead);
                     } while (bytesRead < chunkHeader.BlockSize);                                                        
-
-                    chunkStream.SetLength(bytesRead);
                 }
 
                 // we are at the end of the block, eat the trailing \r\n
