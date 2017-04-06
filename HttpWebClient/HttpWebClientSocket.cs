@@ -24,7 +24,27 @@ using System;
 
 namespace RipcordSoftware.HttpWebClient
 {
-    public class HttpWebClientSocket : IDisposable
+    public interface IHttpWebClientSocket : IDisposable
+    {
+        void Flush();
+
+        void Close();
+
+        void KeepAliveOnClose(int? timeout = null);
+
+        int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None);
+
+        int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None);
+
+        bool Connected { get; }
+        int Available { get; }
+        int Timeout { get; set; }
+        bool NoDelay { get; set; }
+        bool ForceClose { set; }
+        IntPtr Handle { get; }
+    }
+
+    public class HttpWebClientSocket : IHttpWebClientSocket
     {
         #region Types
         protected internal class Socket : IDisposable
@@ -156,7 +176,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Public methods
-        public static HttpWebClientSocket GetSocket(string hostname, int port, int timeout = 30000)
+        public static IHttpWebClientSocket GetSocket(string hostname, int port, int timeout = 30000)
         {
             var socket = HttpWebClientSocketCache.GetSocket(hostname, port, timeout);
             if (socket != null && (socket.IsKeepAliveExpired || !socket.Connected || socket.Available > 0))

@@ -42,7 +42,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Constructor
-        internal HttpWebClientResponse(HttpWebClientSocket socket, bool throwOnError)
+        internal HttpWebClientResponse(IHttpWebClientSocket socket, bool throwOnError)
         {
             try
             {
@@ -162,7 +162,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Private methods
-        private MemoryStream GetHeaders(HttpWebClientSocket socket)
+        private MemoryStream GetHeaders(IHttpWebClientSocket socket)
         {
             var buffer = new byte[7 * 1024];
             int bufferOffset = 0;

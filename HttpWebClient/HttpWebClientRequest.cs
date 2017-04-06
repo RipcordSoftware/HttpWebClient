@@ -34,7 +34,7 @@ namespace RipcordSoftware.HttpWebClient
         #region Private fields
         private readonly HttpWebClientHeaders _headers = new HttpWebClientHeaders();
 
-        private HttpWebClientSocket _socket = null;
+        private IHttpWebClientSocket _socket = null;
         private HttpWebClientResponse _response = null;
 
         private int _socketTimeout = DefaultSocketTimeout;

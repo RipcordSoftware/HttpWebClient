@@ -38,18 +38,18 @@ namespace RipcordSoftware.HttpWebClient
         private class RequestStream : Stream
         {
             #region Private fields
-            private readonly HttpWebClientSocket socket;
+            private readonly IHttpWebClientSocket _socket;
 
-            private readonly byte[] streamBuffer;
-            private int streamBufferPosition = 0;
-            private long position = 0;
+            private readonly byte[] _streamBuffer;
+            private int _streamBufferPosition = 0;
+            private long _position = 0;
             #endregion
 
             #region Constructor
-            public RequestStream(HttpWebClientSocket socket)
+            public RequestStream(IHttpWebClientSocket socket)
             {
-                this.socket = socket;
-                streamBuffer = new byte[7 * 1024];
+                _socket = socket;
+                _streamBuffer = new byte[7 * 1024];
             }
             #endregion
 
@@ -66,7 +66,7 @@ namespace RipcordSoftware.HttpWebClient
             #region implemented abstract members of Stream
             public override void Flush()
             {
-                socket.Flush();
+                _socket.Flush();
             }
             public override int Read(byte[] buffer, int offset, int count)
             {
@@ -84,19 +84,19 @@ namespace RipcordSoftware.HttpWebClient
             {
                 try
                 {
-                    if ((streamBufferPosition + count) >= streamBuffer.Length)
+                    if ((_streamBufferPosition + count) >= _streamBuffer.Length)
                     {
-                        SendBuffer(socket, streamBuffer, 0, streamBufferPosition);
-                        SendBuffer(socket, buffer, offset, count);
-                        streamBufferPosition = 0;
+                        SendBuffer(_socket, _streamBuffer, 0, _streamBufferPosition);
+                        SendBuffer(_socket, buffer, offset, count);
+                        _streamBufferPosition = 0;
                     }
                     else
                     {
-                        Array.Copy(buffer, offset, streamBuffer, streamBufferPosition, count);
-                        streamBufferPosition += count;
+                        Array.Copy(buffer, offset, _streamBuffer, _streamBufferPosition, count);
+                        _streamBufferPosition += count;
                     }
 
-                    position += count;
+                    _position += count;
                 }
                 catch (HttpWebClientRequestException)
                 {
@@ -132,14 +132,14 @@ namespace RipcordSoftware.HttpWebClient
             {
                 get
                 {
-                    return position;
+                    return _position;
                 }
             }
             public override long Position
             {
                 get
                 {
-                    return position;
+                    return _position;
                 }
                 set
                 {
@@ -151,11 +151,11 @@ namespace RipcordSoftware.HttpWebClient
             #region Public methods
             public override void Close()
             {
-                if (streamBufferPosition > 0)
+                if (_streamBufferPosition > 0)
                 {
-                    SendBuffer(socket, streamBuffer, 0, streamBufferPosition);
-                    position += streamBufferPosition;
-                    streamBufferPosition = 0;
+                    SendBuffer(_socket, _streamBuffer, 0, _streamBufferPosition);
+                    _position += _streamBufferPosition;
+                    _streamBufferPosition = 0;
                 }
 
                 Flush();
@@ -163,7 +163,7 @@ namespace RipcordSoftware.HttpWebClient
             #endregion
 
             #region Private methods
-            private static void SendBuffer(HttpWebClientSocket socket, byte[] buffer, int offset, int count)
+            private static void SendBuffer(IHttpWebClientSocket socket, byte[] buffer, int offset, int count)
             {
                 var sent = 0;
                 while (sent < count)
@@ -354,7 +354,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Constructor
-        public HttpWebClientRequestStream(HttpWebClientSocket socket, HttpWebClientHeaders headers)
+        public HttpWebClientRequestStream(IHttpWebClientSocket socket, HttpWebClientHeaders headers)
         {
             this._headers = headers;
 

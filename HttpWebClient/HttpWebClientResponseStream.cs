@@ -40,7 +40,7 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
-        private HttpWebClientSocket _socket;
+        private IHttpWebClientSocket _socket;
 
         private long _position = 0;
         private long? _length;
@@ -49,11 +49,11 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Constructor
-        public HttpWebClientResponseStream(HttpWebClientSocket socket, MemoryStream memStream, long? length)
+        public HttpWebClientResponseStream(IHttpWebClientSocket socket, MemoryStream memStream, long? length)
         {
-            this._socket = socket;
-            this._memStream = memStream;
-            this._length = length;
+            _socket = socket;
+            _memStream = memStream;
+            _length = length;
         }
         #endregion
 
