@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace RipcordSoftware.HttpWebClient
@@ -23,7 +22,7 @@ namespace RipcordSoftware.HttpWebClient
         private HttpWebClientRequest()
         {
             Method = "GET";
-            UserAgent = "Mozilla/5.0 TachosDBWebClient/1.0";
+            UserAgent = "Mozilla/5.0 RSHttpWebClient/1.0";
             Accept = "*/*";
             AcceptEncoding = "gzip, deflate";
         }
