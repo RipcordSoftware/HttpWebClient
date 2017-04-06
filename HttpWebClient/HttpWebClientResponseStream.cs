@@ -204,10 +204,6 @@ namespace RipcordSoftware.HttpWebClient
 
     internal class HttpWebClientChunkedResponseStream : Stream, IHttpWebClientResponseStream
     {
-        #region Constants
-        private int maxResponseChunkSize = 256 * 1024;
-        #endregion
-
         #region Types
         private class ChunkHeader
         {
@@ -220,23 +216,40 @@ namespace RipcordSoftware.HttpWebClient
             public int BlockSize { get; protected set; }
             public int HeaderSize { get; protected set; }
         }
+
+        private class ChunkDescriptor
+        {
+            public ChunkDescriptor(int blockSize)
+            {
+                BlockSize = blockSize;
+            }
+
+            public int IncrementOffset(int delta)
+            {
+                Offset += delta;
+                return Offset;
+            }
+
+            public int BlockSize { get; protected set; }
+            public int Offset { get; protected set; }
+            public int Remaining { get { return BlockSize - Offset; } }
+            public bool IsFinished { get { return Remaining == 0; } }
+        }
         #endregion
 
         #region Private fields
-        private static readonly byte[] lastChunkSig = new byte[] { 0x30, 0x0d, 0x0a, 0x0d, 0x0a };
+        private HttpWebClientResponseStream _stream;
 
-        private HttpWebClientResponseStream stream;
+        private long _length = 0;
+        private long _position = 0;
 
-        private MemoryStream memStream = null;
-
-        private long length = 0;
-        private long position = 0;
+        private ChunkDescriptor _chunk = null;
         #endregion
 
         #region Constructor
         public HttpWebClientChunkedResponseStream(HttpWebClientResponseStream stream)
         {
-            this.stream = stream;
+            _stream = stream;
         }
         #endregion
 
@@ -249,23 +262,31 @@ namespace RipcordSoftware.HttpWebClient
         {
             int read = 0;
 
-            if (memStream == null)
+            if (_chunk == null)
             {
-                memStream = GetChunk();
+                _chunk = GetChunk();
             }
 
-            if (memStream != null)
+            if (_chunk != null && !_chunk.IsFinished)
             {
-                read = memStream.Read(buffer, offset, count);
+                count = Math.Min(count, _chunk.Remaining);
 
-                length += read;
-                position += read;
-
-                if (memStream.Position == memStream.Length)
+                read = _stream.Read(buffer, offset, count);
+                if (read > 0)
                 {
-                    memStream = null;
+                    _chunk.IncrementOffset(read);
+                    _length += read;
+                    _position += read;
                 }
-            } 
+            }
+
+            if (_chunk != null && _chunk.IsFinished)
+            {
+                var temp = new byte[2];
+                _stream.Read(temp, 0, temp.Length);
+
+                _chunk = null;
+            }
 
             return read;
         }
@@ -313,7 +334,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return length;
+                return _length;
             }
         }
 
@@ -321,7 +342,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return position;
+                return _position;
             }
             set
             {
@@ -333,10 +354,10 @@ namespace RipcordSoftware.HttpWebClient
         #region Public methods
         protected override void Dispose(bool disposing)
         {
-            if (stream != null)
+            if (_stream != null)
             {
-                stream.Dispose();
-                stream = null;
+                _stream.Dispose();
+                _stream = null;
             }
         }
         #endregion
@@ -346,7 +367,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             set
             {
-                var socketStream = stream as IHttpWebClientResponseStream;
+                var socketStream = _stream as IHttpWebClientResponseStream;
                 if (socketStream != null)
                 {
                     socketStream.SocketForceClose = value;
@@ -358,7 +379,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = stream as IHttpWebClientResponseStream;
+                var socketStream = _stream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.Available : 0;
             }
         }
@@ -367,7 +388,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = stream as IHttpWebClientResponseStream;
+                var socketStream = _stream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.SocketAvailable : 0;
             }
         }
@@ -376,7 +397,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = stream as IHttpWebClientResponseStream;
+                var socketStream = _stream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.BufferAvailable : 0;
             }
         }
@@ -384,7 +405,7 @@ namespace RipcordSoftware.HttpWebClient
         public int SocketReceive(byte[] buffer, int offset, int count)
         {
             int bytes = 0;
-            var socketStream = stream as IHttpWebClientResponseStream;
+            var socketStream = _stream as IHttpWebClientResponseStream;
             if (socketStream != null)
             {
                 bytes = socketStream.SocketReceive(buffer, offset, count);
@@ -394,48 +415,40 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Private methods
-        private MemoryStream GetChunk()
+        private ChunkDescriptor GetChunk()
         {
-            MemoryStream chunkStream = null;
-
-            var tempBuffer = new byte[16];
-            var tempBufferDataLength = 0;
+            ChunkDescriptor chunk = null;
+            var buffer = new byte[16];
+            var totalRead = 0;
+            var read = 0;
 
             do
             {
-                tempBufferDataLength = stream.Read(tempBuffer, 0, tempBuffer.Length, true);
-            } while (tempBufferDataLength < tempBuffer.Length && !IsLastChunk(tempBuffer, tempBufferDataLength));
-
-            if (tempBufferDataLength > 0)
-            {
-                var chunkHeader = GetChunkHeader(tempBuffer, tempBufferDataLength, maxResponseChunkSize);
-
-                // eat the header since we know the size now
-                stream.Read(tempBuffer, 0, chunkHeader.HeaderSize);
-
-                if (chunkHeader.BlockSize > 0)
+                read = _stream.Read(buffer, 0, buffer.Length, true);
+                if (read > 0)
                 {
-                    var chunkBuffer = new byte[chunkHeader.BlockSize];
-                    chunkStream = new MemoryStream(chunkBuffer);
-
-                    int bytesRead = 0;
-                    do
-                    {
-                        bytesRead += stream.Read(chunkBuffer, bytesRead, chunkHeader.BlockSize - bytesRead);
-                    } while (bytesRead < chunkHeader.BlockSize);                                                        
+                    totalRead += read;
                 }
 
-                // we are at the end of the block, eat the trailing \r\n
-                stream.Read(tempBuffer, 0, 2);
+            } while (read > 0 && totalRead < buffer.Length);
+
+            if (totalRead > 0)
+            {
+                var chunkHeader = GetChunkHeader(buffer, totalRead);
+
+                // eat the header since we know the size now
+                _stream.Read(buffer, 0, chunkHeader.HeaderSize);
+
+                chunk = new ChunkDescriptor(chunkHeader.BlockSize);
             }
 
-            return chunkStream;
+            return chunk;
         }
 
-        private static ChunkHeader GetChunkHeader(byte[] buffer, int dataLength, int maxRequestChunkSize)
+        private static ChunkHeader GetChunkHeader(byte[] buffer, int dataLength)
         {
             ChunkHeader header = null;
-            int i = 0;
+            var i = 0;
 
             dataLength = Math.Min(buffer.Length, dataLength);
 
@@ -475,12 +488,6 @@ namespace RipcordSoftware.HttpWebClient
                 length += value;
             }
 
-            if (length > maxRequestChunkSize)
-            {
-                var msg = string.Format("The response chunk size ({0}) is too large", length);
-                throw new HttpWebClientResponseException(msg);
-            }
-
             if (buffer[i] == '\n' || (buffer[i++] == '\r' && i < dataLength && buffer[i] == '\n'))
             {
                 header = new ChunkHeader(length, i + 1);
@@ -491,26 +498,6 @@ namespace RipcordSoftware.HttpWebClient
             }
 
             return header;
-        }
-
-        private bool IsLastChunk(byte[] buffer, int dataLength)
-        {
-            dataLength = Math.Min(buffer.Length, dataLength);
-
-            int sigIndex = 0;
-            for (int i = 0; i < dataLength; i++)
-            {
-                if (buffer[i] == lastChunkSig[sigIndex])
-                {
-                    sigIndex++;
-                }
-                else
-                {
-                    sigIndex = 0;
-                }
-            }
-
-            return sigIndex == lastChunkSig.Length;
         }
         #endregion
     }

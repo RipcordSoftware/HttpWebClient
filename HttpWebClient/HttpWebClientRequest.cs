@@ -132,7 +132,7 @@ namespace RipcordSoftware.HttpWebClient
             {
                 if (socket == null)
                 {
-                    using (GetRequestStream());
+                    using (GetRequestStream()) { }
                 }
 
                 response = new HttpWebClientResponse(socket, throwOnError);
