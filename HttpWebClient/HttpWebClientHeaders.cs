@@ -37,6 +37,7 @@ namespace RipcordSoftware.HttpWebClient
             Method = "GET";
             Uri = "/";
             Port = 80;
+            Hostname = "localhost";
             Secure = false;
             ContentLength = null;
         }
