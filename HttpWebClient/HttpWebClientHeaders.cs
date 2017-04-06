@@ -1,4 +1,26 @@
-﻿using System;
+﻿//The MIT License(MIT)
+//
+//Copyright(c) 2015-2017 Ripcord Software Ltd
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
 using System.Collections.Generic;
 
 namespace RipcordSoftware.HttpWebClient
@@ -6,7 +28,7 @@ namespace RipcordSoftware.HttpWebClient
     public class HttpWebClientHeaders
     {
         #region Private fields
-        private readonly Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         #endregion
 
         #region Constructor
@@ -26,7 +48,7 @@ namespace RipcordSoftware.HttpWebClient
             get
             { 
                 string value = null;
-                headers.TryGetValue(key, out value);
+                _headers.TryGetValue(key, out value);
                 return value;
             }
 
@@ -34,11 +56,11 @@ namespace RipcordSoftware.HttpWebClient
             {
                 if (value != null)
                 {
-                    headers[key] = value;
+                    _headers[key] = value;
                 }
                 else
                 {
-                    headers.Remove(key);
+                    _headers.Remove(key);
                 }
             }
         }
@@ -64,7 +86,7 @@ namespace RipcordSoftware.HttpWebClient
             header.AppendFormat("{0} {1} HTTP/1.1\r\n", Method, Uri);
             header.AppendFormat("Host: {0}:{1}\r\n", Hostname, Port);
 
-            foreach (var pair in headers)
+            foreach (var pair in _headers)
             {
                 header.AppendFormat("{0}: {1}\r\n", pair.Key, pair.Value);
             }

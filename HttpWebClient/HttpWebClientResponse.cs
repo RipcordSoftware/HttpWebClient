@@ -1,24 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//The MIT License(MIT)
+//
+//Copyright(c) 2015-2017 Ripcord Software Ltd
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
 using System.IO;
-using System.IO.Compression;
 
 namespace RipcordSoftware.HttpWebClient
 {
     public class HttpWebClientResponse : IDisposable
     {
         #region Constants
-        private const int defaultKeepAliveTimeout = 5000;
+        private const int DefaultKeepAliveTimeout = 5000;
         #endregion
 
         #region Private fields
-        private Stream responseStream;
+        private Stream _responseStream;
 
-        private readonly HttpWebClientHeaders headers = new HttpWebClientHeaders();
+        private readonly HttpWebClientHeaders _headers = new HttpWebClientHeaders();
 
-        private long? contentLength;
+        private long? _contentLength;
 
-        private readonly byte[] tempBuffer = new byte[256];
+        private readonly byte[] _tempBuffer = new byte[256];
         #endregion
 
         #region Constructor
@@ -37,28 +57,28 @@ namespace RipcordSoftware.HttpWebClient
                         keepAliveTimeout = KeepAliveTimeout;
                     }
 
-                    socket.KeepAliveOnClose(keepAliveTimeout ?? defaultKeepAliveTimeout);
+                    socket.KeepAliveOnClose(keepAliveTimeout ?? DefaultKeepAliveTimeout);
                 }
 
-                var stream = new HttpWebClientResponseStream(socket, memStream, contentLength);
+                var stream = new HttpWebClientResponseStream(socket, memStream, _contentLength);
 
                 if (string.Compare(TransferEncoding, "chunked", true) == 0)
                 {
-                    responseStream = new HttpWebClientChunkedResponseStream(stream);
+                    _responseStream = new HttpWebClientChunkedResponseStream(stream);
                 }
                 else
                 {
-                    responseStream = stream;
+                    _responseStream = stream;
                 }
 
                 switch (ContentEncoding)
                 {
                     case "deflate":
-                        responseStream = new HttpWebClientDeflateResponseStream(responseStream);
+                        _responseStream = new HttpWebClientDeflateResponseStream(_responseStream);
                         break;
 
                     case "gzip":
-                        responseStream = new HttpWebClientGZipResponseStream(responseStream);
+                        _responseStream = new HttpWebClientGZipResponseStream(_responseStream);
                         break;
                 }
             }
@@ -73,12 +93,12 @@ namespace RipcordSoftware.HttpWebClient
                 var errStream = new MemoryStream();
 
                 // read the response stream into memory 
-                responseStream.CopyTo(errStream);
+                _responseStream.CopyTo(errStream);
                 errStream.Position = 0;
 
                 // close the response stream
-                responseStream.Dispose();
-                responseStream = null;
+                _responseStream.Dispose();
+                _responseStream = null;
 
                 var msg = string.Format("{0} {1}", StatusCode, StatusDescription);
                 throw new HttpWebClientResponseStatusException(msg, StatusCode, StatusDescription, Headers, errStream.ToArray());
@@ -89,16 +109,16 @@ namespace RipcordSoftware.HttpWebClient
         #region Public methods
         public Stream GetResponseStream()
         {
-            return responseStream;
+            return _responseStream;
         }
         #endregion
 
         #region Public properties
-        public string Connection { get { return headers["Connection"]; } }
-        public string KeepAlive { get { return headers["Keep-Alive"]; } }
-        public string ContentType { get { return headers["Content-Type"]; } }
-        public string ContentEncoding { get { return headers["Content-Encoding"]; } }
-        public string TransferEncoding { get { return headers["Transfer-Encoding"]; } }
+        public string Connection { get { return _headers["Connection"]; } }
+        public string KeepAlive { get { return _headers["Keep-Alive"]; } }
+        public string ContentType { get { return _headers["Content-Type"]; } }
+        public string ContentEncoding { get { return _headers["Content-Encoding"]; } }
+        public string TransferEncoding { get { return _headers["Transfer-Encoding"]; } }
 
         public int? KeepAliveTimeout
         {
@@ -134,9 +154,9 @@ namespace RipcordSoftware.HttpWebClient
             }
         }
 
-        public HttpWebClientHeaders Headers { get { return headers; } }
+        public HttpWebClientHeaders Headers { get { return _headers; } }
 
-        public long ContentLength { get { return contentLength.HasValue ? contentLength.Value : 0; } }
+        public long ContentLength { get { return _contentLength.HasValue ? _contentLength.Value : 0; } }
         public int StatusCode { get; protected set; }
         public string StatusDescription { get; protected set; }
         #endregion
@@ -260,12 +280,12 @@ namespace RipcordSoftware.HttpWebClient
                     if (value != null)
                     {
                         var key = headers[i].Substring(0, seperatorIndex).Trim();
-                        this.headers[key] = value;
+                        this._headers[key] = value;
                     }
                 }
             }
 
-            var contentLengthText = this.headers["Content-Length"];
+            var contentLengthText = this._headers["Content-Length"];
             if (contentLengthText != null)
             {
                 long contentLength = -1;
@@ -274,7 +294,7 @@ namespace RipcordSoftware.HttpWebClient
                     throw new HttpWebClientResponseException("The response headers contain an invalid content length value");
                 }
 
-                this.contentLength = contentLength;
+                this._contentLength = contentLength;
             }
         }
 
@@ -283,7 +303,7 @@ namespace RipcordSoftware.HttpWebClient
             int read = 0;
             while (read < count)
             {
-                read += stream.Read(tempBuffer, 0, Math.Min(tempBuffer.Length, count - read));
+                read += stream.Read(_tempBuffer, 0, Math.Min(_tempBuffer.Length, count - read));
             }
         }
 
@@ -292,7 +312,7 @@ namespace RipcordSoftware.HttpWebClient
             int read = 0;
             while (read < count)
             {
-                read += stream.SocketReceive(tempBuffer, 0, Math.Min(tempBuffer.Length, count - read));
+                read += stream.SocketReceive(_tempBuffer, 0, Math.Min(_tempBuffer.Length, count - read));
             }
         }
         #endregion
@@ -300,25 +320,25 @@ namespace RipcordSoftware.HttpWebClient
         #region IDisposable implementation
         public void Dispose()
         {
-            if (responseStream != null)
+            if (_responseStream != null)
             {
                 // before we finish with the response we should try to drain the stream of any remaining data
                 // this will allow us to use the socket for another request/response without returning it to the OS
-                var clientStream = responseStream as IHttpWebClientResponseStream;
+                var clientStream = _responseStream as IHttpWebClientResponseStream;
                 if (clientStream != null)
                 {
                     if (string.Compare(Connection, "close", true) == 0)
                     {
                         clientStream.SocketForceClose = true;
                     }
-                    else if (contentLength.HasValue)
+                    else if (_contentLength.HasValue)
                     {
-                        var remainingBytes = contentLength.Value - responseStream.Position;
+                        var remainingBytes = _contentLength.Value - _responseStream.Position;
                         if (remainingBytes > 0)
                         {
                             if (remainingBytes == clientStream.BufferAvailable || remainingBytes == clientStream.Available)
                             {
-                                SkipStreamBytes(responseStream, (int)remainingBytes);
+                                SkipStreamBytes(_responseStream, (int)remainingBytes);
                             }
                             else if (remainingBytes <= 65536)
                             {
@@ -328,13 +348,13 @@ namespace RipcordSoftware.HttpWebClient
                                     System.Threading.Thread.Sleep(1);
                                     if (remainingBytes == clientStream.Available)
                                     {
-                                        SkipStreamBytes(responseStream, (int)remainingBytes);
+                                        SkipStreamBytes(_responseStream, (int)remainingBytes);
                                         break;
                                     }
                                 }
                             }
 
-                            if (responseStream.Position < contentLength.Value)
+                            if (_responseStream.Position < _contentLength.Value)
                             {
                                 clientStream.SocketForceClose = true;
                             }
@@ -356,8 +376,8 @@ namespace RipcordSoftware.HttpWebClient
                     }
                 }
 
-                responseStream.Dispose();
-                responseStream = null;
+                _responseStream.Dispose();
+                _responseStream = null;
             }
         }
         #endregion

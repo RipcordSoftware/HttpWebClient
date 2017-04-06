@@ -1,4 +1,26 @@
-﻿using System;
+﻿//The MIT License(MIT)
+//
+//Copyright(c) 2015-2017 Ripcord Software Ltd
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
 
 namespace RipcordSoftware.HttpWebClient
 {
@@ -117,19 +139,19 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Private fields
-        private Socket socket;
-        private bool forceClose = false;
+        private Socket _socket;
+        private bool _forceClose = false;
         #endregion
 
         #region Contructor
         protected HttpWebClientSocket(string hostname, int port, int timeout = 30000)
         {
-            socket = new Socket(hostname, port, timeout);
+            _socket = new Socket(hostname, port, timeout);
         }
 
         protected internal HttpWebClientSocket(HttpWebClientSocket.Socket socket)
         {
-            this.socket = socket;
+            this._socket = socket;
         }
         #endregion
 
@@ -156,33 +178,33 @@ namespace RipcordSoftware.HttpWebClient
 
         public void Flush()
         {
-            socket.Flush();
+            _socket.Flush();
         }
 
         public int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
         {
-            return socket.Receive(buffer, offset, count, peek, flags);
+            return _socket.Receive(buffer, offset, count, peek, flags);
         }
 
         public int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
         {
-            return socket.Send(buffer, offset, count, flags);
+            return _socket.Send(buffer, offset, count, flags);
         }
 
         public void Close()
         {
-            if (socket != null)
+            if (_socket != null)
             {
-                if (!forceClose && socket.IsKeepAlive && !socket.IsKeepAliveExpired && socket.Connected && socket.Available == 0)
+                if (!_forceClose && _socket.IsKeepAlive && !_socket.IsKeepAliveExpired && _socket.Connected && _socket.Available == 0)
                 {
-                    HttpWebClientSocketCache.ReleaseSocket(socket);
+                    HttpWebClientSocketCache.ReleaseSocket(_socket);
                 }
                 else
                 {
-                    socket.Close();
+                    _socket.Close();
                 }
 
-                socket = null;
+                _socket = null;
             }
         }
 
@@ -195,21 +217,21 @@ namespace RipcordSoftware.HttpWebClient
                 timeout = Timeout / 2;
             }                
 
-            socket.KeepAliveOnClose(timeout);
+            _socket.KeepAliveOnClose(timeout);
         }
         #endregion
 
         #region Public properties
-        public bool Connected { get { return socket.Connected; } }
-        public int Available { get { return socket.Available; } }
+        public bool Connected { get { return _socket.Connected; } }
+        public int Available { get { return _socket.Available; } }
 
-        public int Timeout { get { return socket.Timeout; } set { socket.Timeout = value; } }
+        public int Timeout { get { return _socket.Timeout; } set { _socket.Timeout = value; } }
 
-        public bool NoDelay { get { return socket.NoDelay; } set { socket.NoDelay = value; } }
+        public bool NoDelay { get { return _socket.NoDelay; } set { _socket.NoDelay = value; } }
 
-        public bool ForceClose { set { forceClose = value; } }
+        public bool ForceClose { set { _forceClose = value; } }
 
-        public IntPtr Handle { get { return socket.Handle; } }
+        public IntPtr Handle { get { return _socket.Handle; } }
         #endregion
 
         #region IDisposable implementation

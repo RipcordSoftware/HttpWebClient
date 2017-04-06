@@ -1,4 +1,26 @@
-﻿using System;
+﻿//The MIT License(MIT)
+//
+//Copyright(c) 2015-2017 Ripcord Software Ltd
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
 using System.IO;
 
 using Ionic.Zlib;
@@ -18,20 +40,20 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
-        private HttpWebClientSocket socket;
+        private HttpWebClientSocket _socket;
 
-        private long position = 0;
-        private long? length;
+        private long _position = 0;
+        private long? _length;
 
-        private MemoryStream memStream;
+        private MemoryStream _memStream;
         #endregion
 
         #region Constructor
         public HttpWebClientResponseStream(HttpWebClientSocket socket, MemoryStream memStream, long? length)
         {
-            this.socket = socket;
-            this.memStream = memStream;
-            this.length = length;
+            this._socket = socket;
+            this._memStream = memStream;
+            this._length = length;
         }
         #endregion
 
@@ -82,14 +104,14 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return length.HasValue ? length.Value : position;
+                return _length.HasValue ? _length.Value : _position;
             }
         }
         public override long Position
         {
             get
             {
-                return position;
+                return _position;
             }
             set
             {
@@ -102,40 +124,40 @@ namespace RipcordSoftware.HttpWebClient
         public int Read(byte[] buffer, int offset, int count, bool peek)
         {
             int size = 0;
-            long wantLength = length.HasValue ? length.Value : long.MaxValue;
+            long wantLength = _length.HasValue ? _length.Value : long.MaxValue;
 
-            if (memStream != null && position < wantLength)
+            if (_memStream != null && _position < wantLength)
             {
-                var startPos = memStream.Position;
-                memStream.Read(buffer, offset, count);
-                size = (int)(memStream.Position - startPos);
+                var startPos = _memStream.Position;
+                _memStream.Read(buffer, offset, count);
+                size = (int)(_memStream.Position - startPos);
 
                 if (peek)
                 {
-                    memStream.Position = startPos;
+                    _memStream.Position = startPos;
                 }
                 else
                 {
-                    if (memStream.Position == memStream.Length)
+                    if (_memStream.Position == _memStream.Length)
                     {
-                        memStream = null;
+                        _memStream = null;
                     }
 
-                    position += size;
+                    _position += size;
                 }
                 
                 offset += size;
                 count -= size;
             }
 
-            if ((size == 0 || socket.Available > 0) && count > 0 && position < wantLength)
+            if ((size == 0 || _socket.Available > 0) && count > 0 && _position < wantLength)
             {
-                var received = socket.Receive(buffer, offset, count, peek);
+                var received = _socket.Receive(buffer, offset, count, peek);
                 size += received;
 
                 if (!peek)
                 {
-                    position += received;
+                    _position += received;
                 }
             }
 
@@ -148,10 +170,10 @@ namespace RipcordSoftware.HttpWebClient
         {
             if (disposing)
             {
-                if (socket != null)
+                if (_socket != null)
                 {
-                    socket.Close();
-                    socket = null;
+                    _socket.Close();
+                    _socket = null;
                 }
             }
 
@@ -172,7 +194,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return socket != null ? socket.Available : 0;
+                return _socket != null ? _socket.Available : 0;
             }
         }
 
@@ -180,7 +202,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return memStream != null ? (int)(memStream.Length - memStream.Position) : 0;
+                return _memStream != null ? (int)(_memStream.Length - _memStream.Position) : 0;
             }
         }
 
@@ -188,16 +210,16 @@ namespace RipcordSoftware.HttpWebClient
         {
             set
             {
-                if (socket != null)
+                if (_socket != null)
                 {
-                    socket.ForceClose = value;
+                    _socket.ForceClose = value;
                 }
             }
         }
             
         public int SocketReceive(byte[] buffer, int offset, int count)
         {
-            return socket != null ? socket.Receive(buffer, offset, count) : 0;
+            return _socket != null ? _socket.Receive(buffer, offset, count) : 0;
         }
         #endregion
     }
@@ -505,15 +527,15 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientGZipResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
-        private GZipStream stream;
-        private Stream baseStream;
+        private GZipStream _stream;
+        private Stream _baseStream;
         #endregion
 
         #region Constructor
         public HttpWebClientGZipResponseStream(Stream baseStream)
         {
-            this.baseStream = baseStream;
-            stream = new GZipStream(this.baseStream, CompressionMode.Decompress);
+            this._baseStream = baseStream;
+            _stream = new GZipStream(this._baseStream, CompressionMode.Decompress);
         }
         #endregion
 
@@ -524,7 +546,7 @@ namespace RipcordSoftware.HttpWebClient
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var bytes = stream.Read(buffer, offset, count);
+            var bytes = _stream.Read(buffer, offset, count);
             return bytes;
         }
 
@@ -571,7 +593,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return baseStream.Length;
+                return _baseStream.Length;
             }
         }
 
@@ -579,7 +601,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return baseStream.Position;
+                return _baseStream.Position;
             }
             set
             {
@@ -594,7 +616,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             set
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 if (socketStream != null)
                 {
                     socketStream.SocketForceClose = value;
@@ -606,7 +628,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.Available : 0;
             }
         }
@@ -615,7 +637,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.SocketAvailable : 0;
             }
         }
@@ -624,7 +646,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.BufferAvailable : 0;
             }
         }
@@ -632,7 +654,7 @@ namespace RipcordSoftware.HttpWebClient
         public int SocketReceive(byte[] buffer, int offset, int count)
         {
             int bytes = 0;
-            var socketStream = baseStream as IHttpWebClientResponseStream;
+            var socketStream = _baseStream as IHttpWebClientResponseStream;
             if (socketStream != null)
             {
                 bytes = socketStream.SocketReceive(buffer, offset, count);
@@ -646,7 +668,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             if (disposing)
             {
-                stream.Dispose();
+                _stream.Dispose();
             }
         }
         #endregion
@@ -655,15 +677,15 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientDeflateResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
-        private DeflateStream stream;
-        private Stream baseStream;
+        private DeflateStream _stream;
+        private Stream _baseStream;
         #endregion
 
         #region Constructor
         public HttpWebClientDeflateResponseStream(Stream baseStream)
         {
-            this.baseStream = baseStream;
-            stream = new DeflateStream(this.baseStream, CompressionMode.Decompress);
+            this._baseStream = baseStream;
+            _stream = new DeflateStream(this._baseStream, CompressionMode.Decompress);
         }
         #endregion
 
@@ -674,7 +696,7 @@ namespace RipcordSoftware.HttpWebClient
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var bytes = stream.Read(buffer, offset, count);
+            var bytes = _stream.Read(buffer, offset, count);
             return bytes;
         }
 
@@ -721,7 +743,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return baseStream.Length;
+                return _baseStream.Length;
             }
         }
 
@@ -729,7 +751,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return baseStream.Position;
+                return _baseStream.Position;
             }
             set
             {
@@ -744,7 +766,7 @@ namespace RipcordSoftware.HttpWebClient
         { 
             set
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 if (socketStream != null)
                 {
                     socketStream.SocketForceClose = value;
@@ -756,7 +778,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.Available : 0;
             }
         }
@@ -765,7 +787,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.SocketAvailable : 0;
             }
         }
@@ -774,7 +796,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                var socketStream = baseStream as IHttpWebClientResponseStream;
+                var socketStream = _baseStream as IHttpWebClientResponseStream;
                 return socketStream != null ? socketStream.BufferAvailable : 0;
             }
         }
@@ -782,7 +804,7 @@ namespace RipcordSoftware.HttpWebClient
         public int SocketReceive(byte[] buffer, int offset, int count)
         {
             int bytes = 0;
-            var socketStream = baseStream as IHttpWebClientResponseStream;
+            var socketStream = _baseStream as IHttpWebClientResponseStream;
             if (socketStream != null)
             {
                 bytes = socketStream.SocketReceive(buffer, offset, count);
@@ -796,7 +818,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             if (disposing)
             {
-                stream.Dispose();
+                _stream.Dispose();
             }
         }
         #endregion

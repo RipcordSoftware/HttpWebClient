@@ -1,4 +1,26 @@
-﻿using System;
+﻿//The MIT License(MIT)
+//
+//Copyright(c) 2015-2017 Ripcord Software Ltd
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System;
 using System.IO;
 
 namespace RipcordSoftware.HttpWebClient
@@ -6,10 +28,10 @@ namespace RipcordSoftware.HttpWebClient
     internal class HttpWebClientRequestStream : Stream
     {
         #region Private fields
-        private readonly HttpWebClientHeaders headers;
+        private readonly HttpWebClientHeaders _headers;
 
-        private RequestStream requestStream;
-        private ChunkedRequestStream chunkedStream;
+        private RequestStream _requestStream;
+        private ChunkedRequestStream _chunkedStream;
         #endregion
 
         #region Types
@@ -334,22 +356,22 @@ namespace RipcordSoftware.HttpWebClient
         #region Constructor
         public HttpWebClientRequestStream(HttpWebClientSocket socket, HttpWebClientHeaders headers)
         {
-            this.headers = headers;
+            this._headers = headers;
 
-            requestStream = new RequestStream(socket);
+            _requestStream = new RequestStream(socket);
         }
         #endregion
 
-        #region implemented abstract members of Stream
+        #region Implemented abstract members of Stream
         public override void Flush()
         {
-            if (chunkedStream != null)
+            if (_chunkedStream != null)
             {
-                chunkedStream.Flush();
+                _chunkedStream.Flush();
             }
-            else if (requestStream != null)
+            else if (_requestStream != null)
             {
-                requestStream.Flush();
+                _requestStream.Flush();
             }
         }
 
@@ -370,26 +392,26 @@ namespace RipcordSoftware.HttpWebClient
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (requestStream != null)
+            if (_requestStream != null)
             {
-                if (requestStream.Position == 0)
+                if (_requestStream.Position == 0)
                 {
-                    if (!headers.ContentLength.HasValue)
+                    if (!_headers.ContentLength.HasValue)
                     {
-                        headers["Transfer-Encoding"] = "chunked";
-                        chunkedStream = new ChunkedRequestStream(requestStream);
+                        _headers["Transfer-Encoding"] = "chunked";
+                        _chunkedStream = new ChunkedRequestStream(_requestStream);
                     }
 
                     SendHeaders();
                 }
 
-                if (chunkedStream != null)
+                if (_chunkedStream != null)
                 {
-                    chunkedStream.Write(buffer, offset, count);
+                    _chunkedStream.Write(buffer, offset, count);
                 }
                 else
                 {
-                    requestStream.Write(buffer, offset, count);
+                    _requestStream.Write(buffer, offset, count);
                 }
             }
         }
@@ -430,7 +452,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             get
             {
-                return chunkedStream != null ? chunkedStream.Position : 0;
+                return _chunkedStream != null ? _chunkedStream.Position : 0;
             }
             set
             {
@@ -442,17 +464,17 @@ namespace RipcordSoftware.HttpWebClient
         #region Private and protected methods
         protected override void Dispose(bool disposing)
         {
-            if (disposing && requestStream != null)
+            if (disposing && _requestStream != null)
             {
                 try
                 {
-                    if (requestStream.Position == 0)
+                    if (_requestStream.Position == 0)
                     {
-                        headers["Transfer-Encoding"] = null;
+                        _headers["Transfer-Encoding"] = null;
 
-                        if (headers.Method == "PUT" || headers.Method == "POST")
+                        if (_headers.Method == "PUT" || _headers.Method == "POST")
                         {
-                            headers.ContentLength = 0;
+                            _headers.ContentLength = 0;
                         }
 
                         SendHeaders();
@@ -460,17 +482,17 @@ namespace RipcordSoftware.HttpWebClient
                 }
                 finally
                 {
-                    if (chunkedStream != null)
+                    if (_chunkedStream != null)
                     {
-                        chunkedStream.Close();
+                        _chunkedStream.Close();
                     }
                     else
                     {
-                        requestStream.Close();
+                        _requestStream.Close();
                     }
 
-                    chunkedStream = null;
-                    requestStream = null;
+                    _chunkedStream = null;
+                    _requestStream = null;
                 }
             }
         }
@@ -479,12 +501,12 @@ namespace RipcordSoftware.HttpWebClient
         {
             try
             {
-                var bytes = headers.GetHeaderBytes();
-                requestStream.Write(bytes, 0, bytes.Length);
+                var bytes = _headers.GetHeaderBytes();
+                _requestStream.Write(bytes, 0, bytes.Length);
             }
             catch (Exception ex)
             {
-                var msg = string.Format("Unable to send headers to the remote host {0}:{1}", headers.Hostname, headers.Port);
+                var msg = string.Format("Unable to send headers to the remote host {0}:{1}", _headers.Hostname, _headers.Port);
                 throw new HttpWebClientRequestException(msg, ex);
             }
         }
