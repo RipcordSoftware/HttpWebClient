@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/RipcordSoftware/HttpWebClient.svg?branch=master)](https://travis-ci.org/RipcordSoftware/HttpWebClient)
+[![Build status](https://ci.appveyor.com/api/projects/status/3cjlb49rdxoxg68i?svg=true)](https://ci.appveyor.com/project/craigminihan/httpwebclient)
 
 # HttpWebClient
 The HttpWebClient is a C# HTTP Web Client implementation designed to drop-in replace Mono's HttpWebRequest and HttpWebResponse implementation. The main goals were:
