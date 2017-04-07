@@ -50,13 +50,13 @@ namespace RipcordSoftware.HttpWebClient
         protected internal class Socket : IDisposable
         {
             #region Private fields
-            private System.Net.Sockets.Socket socket;
+            private System.Net.Sockets.Socket _socket;
 
-            private int timeout;
+            private int _timeout;
 
-            private bool keepAlive;
-            private long keepAliveStarted;
-            private int? keepAliveTimeout;
+            private bool _keepAlive;
+            private long _keepAliveStarted;
+            private int? _keepAliveTimeout;
             #endregion
 
             #region Constructor
@@ -65,9 +65,9 @@ namespace RipcordSoftware.HttpWebClient
                 Hostname = hostname;
                 Port = port;
 
-                socket = NewSocket(Hostname, Port);
+                _socket = NewSocket(Hostname, Port);
                 Timeout = timeout;
-                socket.Connect(hostname, port);
+                _socket.Connect(hostname, port);
 
                 ResetKeepAlive();
             }
@@ -76,64 +76,64 @@ namespace RipcordSoftware.HttpWebClient
             #region Public methods
             public void Flush()
             {
-                if (socket.NoDelay == false)
+                if (_socket.NoDelay == false)
                 {
                     // setting NoDelay to true will flush the waiting socket data (at least under Mono/Linux)
-                    socket.NoDelay = true;
-                    socket.NoDelay = false;
+                    _socket.NoDelay = true;
+                    _socket.NoDelay = false;
                 }
             }
 
             public int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
             {
                 flags |= peek ? System.Net.Sockets.SocketFlags.Peek : System.Net.Sockets.SocketFlags.None;
-                return socket.Receive(buffer, offset, count, flags);
+                return _socket.Receive(buffer, offset, count, flags);
             }
 
             public int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
             {
-                return socket.Send(buffer, offset, count, flags);
+                return _socket.Send(buffer, offset, count, flags);
             }
 
             public void Close()
             {
-                if (socket != null)
+                if (_socket != null)
                 {
-                    socket.Disconnect(false);
-                    socket.Close();
-                    socket = null;
+                    _socket.Disconnect(false);
+                    _socket.Close();
+                    _socket = null;
                 }
             }
 
             public void KeepAliveOnClose(int? timeout = null)
             {
-                keepAlive = true;
-                keepAliveStarted = Now;
-                keepAliveTimeout = timeout;
+                _keepAlive = true;
+                _keepAliveStarted = Now;
+                _keepAliveTimeout = timeout;
             }
 
             public void ResetKeepAlive()
             {
-                keepAlive = false;
-                keepAliveStarted = 0;
-                keepAliveTimeout = null;
+                _keepAlive = false;
+                _keepAliveStarted = 0;
+                _keepAliveTimeout = null;
             }
             #endregion
 
             #region Public properties
             public string Hostname { get; protected set; }
             public int Port { get; protected set; }
-            public int Timeout { get { return timeout; } set { socket.ReceiveTimeout = value; socket.SendTimeout = value; timeout = value; } }
+            public int Timeout { get { return _timeout; } set { _socket.ReceiveTimeout = value; _socket.SendTimeout = value; _timeout = value; } }
 
-            public bool Connected { get { return socket.Connected; } }
-            public int Available { get { return socket.Available; } }
+            public bool Connected { get { return _socket.Connected; } }
+            public int Available { get { return _socket.Available; } }
 
-            public bool IsKeepAlive { get { return keepAlive; } }
-            public bool IsKeepAliveExpired { get { return keepAliveTimeout.HasValue ? (keepAliveStarted + keepAliveTimeout) < Now : false; } }
+            public bool IsKeepAlive { get { return _keepAlive; } }
+            public bool IsKeepAliveExpired { get { return _keepAliveTimeout.HasValue ? (_keepAliveStarted + _keepAliveTimeout) < Now : false; } }
 
-            public bool NoDelay { get { return socket.NoDelay; } set { socket.NoDelay = value; } }
+            public bool NoDelay { get { return _socket.NoDelay; } set { _socket.NoDelay = value; } }
 
-            public IntPtr Handle { get { return socket.Handle; } }
+            public IntPtr Handle { get { return _socket.Handle; } }
             #endregion
 
             #region Private properties
