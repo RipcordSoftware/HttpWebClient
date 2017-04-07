@@ -1,3 +1,6 @@
 language: csharp
 solution: HttpWebClient.sln
 sudo: false
+
+script:
+    - xbuild "/p:Configuration=Debug - Mono" HttpWebClient.sln
