@@ -135,7 +135,7 @@ namespace RipcordSoftware.HttpWebClient
 
             try
             {
-                _socket = HttpWebClientSocket.GetSocket(_headers.Hostname, _headers.Port, _socketTimeout);
+                _socket = HttpWebClientContainer.Resolve<IHttpWebClientSocket>(_headers.Hostname, _headers.Port, _socketTimeout);
             }
             catch (Exception ex)
             {

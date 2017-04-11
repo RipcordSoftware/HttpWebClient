@@ -33,6 +33,8 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HttpWebClientBootstrap.cs" />
+    <Compile Include="HttpWebClientContainer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HttpWebClientException.cs" />
     <Compile Include="HttpWebClientHeaders.cs" />
