@@ -57,7 +57,7 @@ namespace HttpWebClient.UnitTests
             public bool NoDelay { get; set; }
             public bool ForceClose { protected get; set; }
 
-            public IntPtr Handle => throw new NotImplementedException();
+            public IntPtr Handle { get { throw new NotImplementedException(); } }
 
             public void Close() { }
 
@@ -86,7 +86,7 @@ namespace HttpWebClient.UnitTests
                 return count;
             }
 
-            public string RequestText => _requestText.ToString();
+            public string RequestText { get { return _requestText.ToString(); } }
         }
 
         public TestHttpWebClientRequest()
