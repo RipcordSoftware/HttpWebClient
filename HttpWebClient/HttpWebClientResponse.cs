@@ -245,7 +245,7 @@ namespace RipcordSoftware.HttpWebClient
 
             statusStartIndex++;
 
-            int descStartIndex = headers[headerStartIndex].IndexOf(' ', statusStartIndex);
+            int descStartIndex = headers[headerStartIndex].IndexOf(' ', statusStartIndex) + 1;
             if (descStartIndex <= statusStartIndex)
             {
                 descStartIndex = headers[headerStartIndex].Length;
