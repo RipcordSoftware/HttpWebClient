@@ -4,8 +4,8 @@ sudo: false
 
 install:
   - nuget restore HttpWebClient.sln
-  - nuget install xunit.runners -Version 1.9.2 -OutputDirectory testrunner
+  - nuget install xunit.runner.console -Version 2.2.0 -OutputDirectory testrunner
 
 script:
   - xbuild /p:Configuration=Debug HttpWebClient.sln
-  - mono ./testrunner/xunit.runners.1.9.2/tools/xunit.console.clr4.exe ./HttpWebClient.UnitTests/bin/Debug/HttpWebClient.UnitTests.dll
+  - mono ./testrunner/xunit.runner.console.2.2.0/tools/xunit.console.exe ./HttpWebClient.UnitTests/bin/Debug/HttpWebClient.UnitTests.dll
