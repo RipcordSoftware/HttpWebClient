@@ -49,12 +49,16 @@ namespace RipcordSoftware.HttpWebClient
             AcceptEncoding = "gzip, deflate";
         }
 
-        public HttpWebClientRequest(string hostname, int port, string uri, bool secure = false) : this()
+        public HttpWebClientRequest(string hostname, int port, string uri = null, bool secure = false) : this()
         {
             uri = uri ?? "/";
             if (uri.Length > 0 && uri[0] != '/')
             {
                 uri = "/" + uri;
+            }
+            else if (uri.Length == 0)
+            {
+                uri = "/";
             }
 
             _headers.Hostname = hostname;
@@ -110,6 +114,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Public properties
+        public string Hostname { get { return _headers.Hostname; } }
         public string UserAgent { get { return _headers["User-Agent"]; } set { _headers["User-Agent"] = value; } }
         public string Accept { get { return _headers["Accept"]; } set { _headers["Accept"] = value; } }
         public string AcceptEncoding { get { return _headers["Accept-Encoding"]; } set { _headers["Accept-Encoding"] = value; } }
