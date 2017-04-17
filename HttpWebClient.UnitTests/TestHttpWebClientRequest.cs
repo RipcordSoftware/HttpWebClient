@@ -242,6 +242,60 @@ namespace HttpWebClient.UnitTests
         }
 
         [Fact]
+        public void TestSimplePutRequestResponse()
+        {
+            var requestText = new StringBuilder();
+            var responseText = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/ascii\r\nConnection: close\r\n\r\nhello world";
+
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+
+            var request = new HttpWebClientRequest("http://www.test.com/");
+            request.Method = "PUT";
+            request.ContentType = "text/ascii";
+            request.ContentLength = 33;
+
+            using (var requestStream = request.GetRequestStream())
+            {
+                using (var stream = new StreamWriter(requestStream))
+                {
+                    stream.Write("hello world");
+                    stream.Write("hello world");
+                    stream.Flush();
+                    stream.Write("hello world");
+                }
+            }
+
+            using (var response = request.GetResponse())
+            {
+                Assert.Equal(200, response.StatusCode);
+                Assert.Equal("OK", response.StatusDescription);
+                Assert.Equal(11, response.ContentLength);
+                Assert.Equal("text/ascii", response.ContentType);
+                Assert.Null(response.TransferEncoding);
+                Assert.Null(response.KeepAlive);
+                Assert.Null(response.KeepAliveTimeout);
+                Assert.Equal("close", response.Connection);
+
+                using (var responseStream = response.GetResponseStream())
+                {
+                    using (var stream = new StreamReader(responseStream))
+                    {
+                        var body = stream.ReadToEnd();
+                        Assert.Equal("hello world", body);
+                    }
+                }
+            }
+
+            Assert.True(requestText.Length > 0);
+            Assert.Equal(
+                "PUT / HTTP/1.1\r\nHost: www.test.com:80\r\n" +
+                "User-Agent: Mozilla/5.0 RSHttpWebClient/1.0\r\nAccept: */*\r\nAccept-Encoding: gzip, deflate\r\n" +
+                "Content-Type: text/ascii\r\nContent-Length: 33\r\n\r\n" +
+                "hello worldhello worldhello world",
+                requestText.ToString());
+        }
+
+        [Fact]
         public void TestSimpleRequestChunkedResponse()
         {
             var requestText = new StringBuilder();
@@ -273,6 +327,59 @@ namespace HttpWebClient.UnitTests
 
             Assert.True(requestText.Length > 0);
             Assert.Equal("GET /hello/world HTTP/1.1\r\nHost: www.test.com:80\r\nUser-Agent: Mozilla/5.0 RSHttpWebClient/1.0\r\nAccept: */*\r\nAccept-Encoding: gzip, deflate\r\n\r\n", requestText.ToString());
+        }
+
+        [Fact]
+        public void TestSimplePutRequestChunkedResponse()
+        {
+            var requestText = new StringBuilder();
+            var responseText = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/ascii\r\nConnection: close\r\n\r\nhello world";
+
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+
+            var request = new HttpWebClientRequest("http://www.test.com/");
+            request.Method = "PUT";
+            request.ContentType = "text/ascii";
+
+            using (var requestStream = request.GetRequestStream())
+            {
+                using (var stream = new StreamWriter(requestStream))
+                {
+                    stream.Write("hello world");
+                    stream.Write("hello world");
+                    stream.Flush();
+                    stream.Write("hello world");
+                }
+            }
+
+            using (var response = request.GetResponse())
+            {
+                Assert.Equal(200, response.StatusCode);
+                Assert.Equal("OK", response.StatusDescription);
+                Assert.Equal(11, response.ContentLength);
+                Assert.Equal("text/ascii", response.ContentType);
+                Assert.Null(response.TransferEncoding);
+                Assert.Null(response.KeepAlive);
+                Assert.Null(response.KeepAliveTimeout);
+                Assert.Equal("close", response.Connection);
+
+                using (var responseStream = response.GetResponseStream())
+                {
+                    using (var stream = new StreamReader(responseStream))
+                    {
+                        var body = stream.ReadToEnd();
+                        Assert.Equal("hello world", body);
+                    }
+                }
+            }
+
+            Assert.True(requestText.Length > 0);
+            Assert.Equal(
+                "PUT / HTTP/1.1\r\nHost: www.test.com:80\r\n" +
+                "User-Agent: Mozilla/5.0 RSHttpWebClient/1.0\r\nAccept: */*\r\nAccept-Encoding: gzip, deflate\r\n" +
+                "Content-Type: text/ascii\r\nTransfer-Encoding: chunked\r\n\r\n" +
+                "16\r\nhello worldhello world\r\nB\r\nhello world\r\n0\r\n\r\n",
+                requestText.ToString());
         }
         #endregion
     }
