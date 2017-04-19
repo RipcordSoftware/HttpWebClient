@@ -25,9 +25,9 @@ using System.IO;
 using System.Diagnostics.CodeAnalysis;
 
 using Xunit;
+using Moq;
 
 using RipcordSoftware.HttpWebClient;
-
 
 namespace HttpWebClient.UnitTests
 {
@@ -35,8 +35,11 @@ namespace HttpWebClient.UnitTests
     [ExcludeFromCodeCoverage]
     public class TestHttpWebClientRequestStream
     {
+        #region Private fields
         private readonly byte[] _buffer = new byte[16 * 1024];
+        #endregion
 
+        #region Constructor
         public TestHttpWebClientRequestStream()
         {
             for (var i = 0; i < _buffer.Length; ++i)
@@ -44,7 +47,9 @@ namespace HttpWebClient.UnitTests
                 _buffer[i] = (byte)('a' + (i % 26));
             }
         }
+        #endregion
 
+        #region Tests
         [Fact]
         public void TestInitializedRequestStream()
         {
@@ -84,8 +89,49 @@ namespace HttpWebClient.UnitTests
                     Assert.Equal(_buffer.Length, stream.Position);                    
                 }
 
-                Assert.True(socket.RequestText.StartsWith("abcdefghijklmnopqrstuvwxyz"));
+                Assert.Equal(_buffer.Length, socket.RequestText.Length);
+                Assert.True(socket.RequestText.StartsWith("abcdefghijklmnopqrstuvwxyz"));                
             }
         }
+
+        [Fact]
+        public void TestRequestStreamFailedWrite()
+        {
+            var socket = new Mock<IHttpWebClientSocket>();
+            socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Returns(0);
+
+            using (var stream = new HttpWebClientRequestStream.RequestStream(socket.Object))
+            {
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+
+                var ex = Assert.Throws<HttpWebClientRequestException>(() => stream.Write(_buffer, 0, _buffer.Length));
+                Assert.Null(ex.InnerException);
+
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamWriteThrowws()
+        {
+            var socket = new Mock<IHttpWebClientSocket>();
+            socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Throws<Exception>();
+
+            using (var stream = new HttpWebClientRequestStream.RequestStream(socket.Object))
+            {
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+
+                var ex = Assert.Throws<HttpWebClientRequestException>(() => stream.Write(_buffer, 0, _buffer.Length));
+                Assert.NotNull(ex.InnerException);
+                Assert.IsType<Exception>(ex.InnerException);
+
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+            }
+        }
+        #endregion
     }
 }
