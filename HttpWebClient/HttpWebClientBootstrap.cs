@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using System;
+using System.Threading;
 
 namespace RipcordSoftware.HttpWebClient
 {
@@ -29,9 +30,22 @@ namespace RipcordSoftware.HttpWebClient
     /// </summary>
     internal static class HttpWebClientBootstrap
     {
-        static HttpWebClientBootstrap()
+        private static volatile bool _initialized = false;
+        private static object _lock = new object();
+
+        internal static void Initialize()
         {
-            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return HttpWebClientSocket.GetSocket((string)h, (int)p, (int)t); });
+            if (!_initialized)
+            {
+                lock (_lock)
+                {
+                    if (!_initialized)
+                    {
+                        HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return HttpWebClientSocket.GetSocket((string)h, (int)p, (int)t); });
+                        _initialized = true;
+                    }
+                }
+            }
         }
     }
 }
