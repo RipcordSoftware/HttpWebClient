@@ -18,4 +18,4 @@ build_script:
     
 test_script:
     - cmd: buildtools\OpenCover.%OPENCOVER_VER%\tools\OpenCover.Console.exe -register:user -target:"buildtools\xunit.runner.console.%XUNIT_VER%\tools\xunit.console.exe" -targetargs:"HttpWebClient.UnitTests\bin\%CONFIGURATION%\HttpWebClient.UnitTests.dll -noappdomain" -filter:"+[HttpWebClient]*"
-    - cmd: buildtools\coveralls.net.%COVERALLS_VER%\tools\csmacnz.Coveralls.exe -opencover -i ./results.xml --repoToken "Cq78rGIIKAVq2bCsdndnRcAVX4ESgkEZ3" --commitId "%APPVEYOR_REPO_COMMIT%" --commitBranch "%APPVEYOR_REPO_BRANCH%"
+    - cmd: buildtools\coveralls.net.%COVERALLS_VER%\tools\csmacnz.Coveralls.exe --opencover -i ./results.xml --repoToken "Cq78rGIIKAVq2bCsdndnRcAVX4ESgkEZ3" --commitId "%APPVEYOR_REPO_COMMIT%" --commitBranch "%APPVEYOR_REPO_BRANCH%" --commitAuthor  "%APPVEYOR_REPO_COMMIT_AUTHOR%" --commitEmail "%APPVEYOR_REPO_COMMIT_AUTHOR_EMAIL%"  --commitMessage "%APPVEYOR_REPO_COMMIT_MESSAGE%"
