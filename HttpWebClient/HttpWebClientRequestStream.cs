@@ -140,7 +140,7 @@ namespace RipcordSoftware.HttpWebClient
         internal sealed class ChunkedRequestStream : Stream
         {
             #region Constants
-            private const int MaxRequestChunkSize = 2048;
+            internal const int MaxRequestChunkSize = 2048;
             private const string EndOfLine = "\r\n";
             #endregion
 
@@ -151,12 +151,12 @@ namespace RipcordSoftware.HttpWebClient
 
             private readonly byte[] _streamBuffer;
 
-            private RequestStream _stream = null;
+            private Stream _stream = null;
             private long _position = 0;
             #endregion
 
             #region Constructor
-            public ChunkedRequestStream(RequestStream stream)
+            public ChunkedRequestStream(Stream stream)
             {
                 this._stream = stream;
 

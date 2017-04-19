@@ -39,6 +39,25 @@ namespace HttpWebClient.UnitTests
         private readonly byte[] _buffer = new byte[16 * 1024];
         #endregion
 
+        #region Types
+        private class ChunkedRequestInfo
+        {
+            public ChunkedRequestInfo(int chunks, int written, int padding)
+            {
+                Chunks = chunks;
+                RawWritten = written;
+                Padding = padding;
+            }
+
+            public int Chunks { get; protected set; }
+            public int RawWritten { get; protected set; }
+            public int ChunkedWritten { get { return Padding + RawWritten; } }
+            public int Padding { get; protected set; }
+            public int TotalPadding { get { return Padding + 5; } }
+            public int TotalWritten { get { return RawWritten + TotalPadding; } }
+        }
+        #endregion
+
         #region Constructor
         public TestHttpWebClientRequestStream()
         {
@@ -131,6 +150,100 @@ namespace HttpWebClient.UnitTests
                 Assert.Equal(0, stream.Length);
                 Assert.Equal(0, stream.Position);
             }
+        }
+
+        [Fact]
+        public void TestInitializedChunkedRequestStream()
+        {
+            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(new MemoryStream()))
+            {
+                Assert.False(stream.CanRead);
+                Assert.True(stream.CanWrite);
+                Assert.False(stream.CanSeek);
+                Assert.False(stream.CanTimeout);
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+
+                Assert.Throws<NotImplementedException>(() => stream.Seek(100, SeekOrigin.End));
+                Assert.Throws<NotImplementedException>(() => stream.ReadByte());
+                Assert.Throws<NotImplementedException>(() => stream.SetLength(1024));
+                Assert.Throws<NotImplementedException>(() => stream.Read(new byte[256], 0, 256));
+                Assert.Throws<NotImplementedException>(() => { stream.Position = 1024; });
+            }
+        }
+
+        [Fact]
+        public void TestChunkedRequestStreamSimpleWrite()
+        {
+            var memStream = new NonDisposibleStream(new MemoryStream());
+            var position = 0;
+
+            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(memStream))
+            {
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+
+                var buffer = new byte[] { 1, 2, 3, 4, 5 };
+                stream.Write(buffer, 0, buffer.Length);
+                position += 1 + 2 + 5 + 2;
+
+                Assert.Equal(position, stream.Position);
+                Assert.Equal(position, stream.Length);
+
+                buffer = new byte[] { 6, 7, 8, 9, 0 };
+                stream.Write(buffer, 0, buffer.Length);
+                position += 1 + 2 + 5 + 2;
+
+                Assert.Equal(position, stream.Position);
+                Assert.Equal(position, stream.Length);
+
+                buffer = new byte[] { 0x0a, 0x0b, 0x0c, 0x0d, 0x0e };
+                stream.Write(buffer, 0, buffer.Length);
+                position += 1 + 2 + 5 + 2;
+
+                Assert.Equal(position, stream.Position);
+                Assert.Equal(position, stream.Length);
+            }
+
+            position += 5;
+            Assert.Equal(position, memStream.Position);
+            Assert.Equal(position, memStream.Length);
+        }
+
+        [Fact]
+        public void TestChunkedRequestStreamWrite()
+        {
+            var chunkInfo = CalculateChunkInfo(_buffer.Length);
+            var memStream = new NonDisposibleStream(new MemoryStream());
+
+            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(memStream))
+            {
+                Assert.Equal(0, stream.Length);
+                Assert.Equal(0, stream.Position);
+
+                stream.Write(_buffer, 0, _buffer.Length);                
+
+                Assert.Equal(chunkInfo.ChunkedWritten, stream.Length);
+                Assert.Equal(chunkInfo.ChunkedWritten, stream.Position);
+            }
+
+            Assert.Equal(chunkInfo.TotalWritten, memStream.Length);
+            Assert.Equal(chunkInfo.TotalWritten, memStream.Position);
+        }
+        #endregion
+
+        #region Private methods
+        private static ChunkedRequestInfo CalculateChunkInfo(int written)
+        {
+            var chunks = written / HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize;
+            var padding = chunks * (HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize.ToString("X").Length + 4);
+
+            var lastChunkSize = written % HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize;
+            chunks += lastChunkSize > 0 ? 1 : 0;
+
+            padding += lastChunkSize > 0 ? lastChunkSize.ToString("X").Length + 2 : 0;
+
+            return new ChunkedRequestInfo(chunks, written, padding);
         }
         #endregion
     }
