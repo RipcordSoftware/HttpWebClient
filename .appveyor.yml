@@ -1,9 +1,12 @@
 platform: Any CPU
-configuration: Debug
 image: Visual Studio 2017
 
 before_build:
     - nuget restore
+    - nuget install OpenCover -OutputDirectory buildtools
+    - nuget install xunit.runner.console -OutputDirectory buildtools
 
-build:
-    project: HttpWebClient.sln
+build_script:
+    - msbuild /p:Configuration=Debug HttpWebClient.sln
+
+    
