@@ -5,7 +5,7 @@ configuration: Debug
 environment:
     OPENCOVER_VER: 4.6.519
     XUNIT_VER: 2.2.0
-    COVERALLS_VER: 0.412
+    COVERALLS_VER: 0.7.0
 
 before_build:
     - nuget restore
