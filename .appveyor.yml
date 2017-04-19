@@ -10,5 +10,7 @@ before_build:
 
 build_script:
     - cmd: msbuild /p:Configuration=%CONFIGURATION% HttpWebClient.sln
+    
+test_script:
     - cmd: buildtools\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -target:"buildtools\xunit.runner.console.2.2.0\tools\xunit.console.exe" -targetargs:"HttpWebClient.UnitTests\bin\%CONFIGURATION%\HttpWebClient.UnitTests.dll -noappdomain" -filter:"+[HttpWebClient]*"
     
