@@ -1,5 +1,6 @@
 platform: Any CPU
 image: Visual Studio 2017
+configuration: Debug
 
 before_build:
     - nuget restore
@@ -8,6 +9,6 @@ before_build:
     - nuget install coveralls.net -Version 0.412 -OutputDirectory buildtools
 
 build_script:
-    - msbuild /p:Configuration=Debug HttpWebClient.sln
-
+    - cmd: msbuild /p:Configuration=%CONFIGURATION% HttpWebClient.sln
+    - cmd: buildtools\OpenCover.4.6.519\tools\OpenCover.Console.exe -register:user -target:"buildtools\xunit.runner.console.2.2.0\tools\xunit.console.exe" -targetargs:"HttpWebClient.UnitTests\bin\%CONFIGURATION%\HttpWebClient.UnitTests.dll -noappdomain" -filter:"+[HttpWebClient]*"
     
