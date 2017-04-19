@@ -70,7 +70,7 @@ namespace HttpWebClient.UnitTests
 
         #region Tests
         [Fact]
-        public void TestInitializedRequestStream()
+        public void TestInitializedInnerRequestStream()
         {
             using (var socket = new MemoryStreamSocket())
             {
@@ -93,7 +93,7 @@ namespace HttpWebClient.UnitTests
         }
 
         [Fact]
-        public void TestRequestStreamWrite()
+        public void TestInnerRequestStreamWrite()
         {
             using (var socket = new MemoryStreamSocket())
             {
@@ -114,7 +114,7 @@ namespace HttpWebClient.UnitTests
         }
 
         [Fact]
-        public void TestRequestStreamFailedWrite()
+        public void TestInnerRequestStreamFailedWrite()
         {
             var socket = new Mock<IHttpWebClientSocket>();
             socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Returns(0);
@@ -133,7 +133,7 @@ namespace HttpWebClient.UnitTests
         }
 
         [Fact]
-        public void TestRequestStreamWriteThrowws()
+        public void TestInnerRequestStreamWriteThrows()
         {
             var socket = new Mock<IHttpWebClientSocket>();
             socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Throws<Exception>();
@@ -229,6 +229,224 @@ namespace HttpWebClient.UnitTests
 
             Assert.Equal(chunkInfo.TotalWritten, memStream.Length);
             Assert.Equal(chunkInfo.TotalWritten, memStream.Position);
+        }
+
+        [Fact]
+        public void TestInitializedRequestStream()
+        {
+            using (var socket = new MemoryStreamSocket())
+            {
+                var headers = new HttpWebClientHeaders();
+
+                using (var stream = new HttpWebClientRequestStream(socket, headers))
+                {
+                    Assert.False(stream.CanRead);
+                    Assert.True(stream.CanWrite);
+                    Assert.False(stream.CanSeek);
+                    Assert.False(stream.CanTimeout);
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+
+                    Assert.Throws<NotImplementedException>(() => stream.Seek(100, SeekOrigin.End));
+                    Assert.Throws<NotImplementedException>(() => stream.ReadByte());
+                    Assert.Throws<NotImplementedException>(() => stream.SetLength(1024));
+                    Assert.Throws<NotImplementedException>(() => stream.Read(new byte[256], 0, 256));
+                    Assert.Throws<NotImplementedException>(() => { stream.Position = 1024; });
+                }
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamWriteChunked()
+        {
+            var expectedHeaders = "POST /uri HTTP/1.1\r\nHost: localhost:42\r\nContent-Type: text/ascii\r\nTransfer-Encoding: chunked\r\n\r\n";
+            var chunkInfo = CalculateChunkInfo(_buffer.Length);
+
+            using (var socket = new MemoryStreamSocket())
+            {
+                var headers = new HttpWebClientHeaders();
+                headers.Hostname = "localhost";
+                headers.Port = 42;
+                headers.Method = "POST";
+                headers.Secure = false;
+                headers.Uri = "/uri";
+                headers["Content-Type"] = "text/ascii";
+
+                using (var stream = new HttpWebClientRequestStream(socket, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+
+                    stream.Write(_buffer, 0, _buffer.Length);
+                    
+                    Assert.True(socket.RequestText.StartsWith(expectedHeaders));
+
+                    Assert.Equal(chunkInfo.ChunkedWritten, stream.Length - expectedHeaders.Length);
+                    Assert.Equal(chunkInfo.ChunkedWritten, stream.Position - expectedHeaders.Length);
+                }
+
+                Assert.Equal(chunkInfo.TotalWritten, socket.Length - expectedHeaders.Length);
+                Assert.Equal(chunkInfo.TotalWritten, socket.Position - expectedHeaders.Length);
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamWriteLength()
+        {
+            var expectedHeaders =
+                string.Format("POST /uri HTTP/1.1\r\nHost: localhost:42\r\nContent-Type: text/ascii\r\nContent-Length: {0}\r\n\r\n", _buffer.Length);
+
+            using (var socket = new MemoryStreamSocket())
+            {
+                var headers = new HttpWebClientHeaders();
+                headers.Hostname = "localhost";
+                headers.Port = 42;
+                headers.Method = "POST";
+                headers.Secure = false;
+                headers.Uri = "/uri";
+                headers.ContentLength = _buffer.Length;
+                headers["Content-Type"] = "text/ascii";
+
+                using (var stream = new HttpWebClientRequestStream(socket, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+
+                    stream.Write(_buffer, 0, _buffer.Length);
+
+                    Assert.True(socket.RequestText.StartsWith(expectedHeaders));
+
+                    Assert.Equal(_buffer.Length + expectedHeaders.Length, stream.Length);
+                    Assert.Equal(_buffer.Length + expectedHeaders.Length, stream.Position);
+                }
+
+                Assert.Equal(_buffer.Length + expectedHeaders.Length, socket.Length);
+                Assert.Equal(_buffer.Length + expectedHeaders.Length, socket.Position);
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamWritePostEmptyBody()
+        {
+            var expectedHeaders =
+                string.Format("POST /uri HTTP/1.1\r\nHost: localhost:42\r\nContent-Type: text/ascii\r\nContent-Length: 0\r\n\r\n", _buffer.Length);
+
+            using (var socket = new MemoryStreamSocket())
+            {
+                var headers = new HttpWebClientHeaders();
+                headers.Hostname = "localhost";
+                headers.Port = 42;
+                headers.Method = "POST";
+                headers.Secure = false;
+                headers.Uri = "/uri";
+                headers.ContentLength = _buffer.Length;
+                headers["Content-Type"] = "text/ascii";
+
+                using (var stream = new HttpWebClientRequestStream(socket, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                }
+
+                Assert.True(socket.RequestText.StartsWith(expectedHeaders));
+                Assert.Equal(expectedHeaders.Length, socket.Length);
+                Assert.Equal(expectedHeaders.Length, socket.Position);
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamWritePutEmptyBody()
+        {
+            var expectedHeaders =
+                string.Format("PUT /uri HTTP/1.1\r\nHost: localhost:42\r\nContent-Type: text/ascii\r\nContent-Length: 0\r\n\r\n", _buffer.Length);
+
+            using (var socket = new MemoryStreamSocket())
+            {
+                var headers = new HttpWebClientHeaders();
+                headers.Hostname = "localhost";
+                headers.Port = 42;
+                headers.Method = "PUT";
+                headers.Secure = false;
+                headers.Uri = "/uri";
+                headers.ContentLength = _buffer.Length;
+                headers["Content-Type"] = "text/ascii";
+
+                using (var stream = new HttpWebClientRequestStream(socket, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                }
+
+                Assert.True(socket.RequestText.StartsWith(expectedHeaders));
+                Assert.Equal(expectedHeaders.Length, socket.Length);
+                Assert.Equal(expectedHeaders.Length, socket.Position);
+            }
+        }
+
+        [Fact]
+        public void TestRequestStreamFailedHeaderWrite()
+        {
+            var socket = new Mock<IHttpWebClientSocket>();
+            socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Returns(0);
+
+            var headers = new HttpWebClientHeaders();
+            headers.Hostname = "localhost";
+            headers.Port = 42;
+            headers.Method = "PUT";
+            headers.Secure = false;
+            headers.Uri = "/uri";
+            headers.ContentLength = _buffer.Length;
+            headers["Content-Type"] = "text/ascii";
+
+            Assert.Throws<HttpWebClientRequestException>(() =>
+            {
+                using (var stream = new HttpWebClientRequestStream(socket.Object, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                }
+            });
+        }
+
+        [Fact]
+        public void TestRequestStreamCloseThrows()
+        {
+            var socket = new Mock<IHttpWebClientSocket>();
+            socket.Setup(s => s.Send(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<System.Net.Sockets.SocketFlags>())).Throws<Exception>();
+
+            var headers = new HttpWebClientHeaders();
+            headers.Hostname = "localhost";
+            headers.Port = 42;
+            headers.Method = "PUT";
+            headers.Secure = false;
+            headers.Uri = "/uri";
+            headers.ContentLength = _buffer.Length;
+            headers["Content-Type"] = "text/ascii";
+
+            Assert.Throws<HttpWebClientRequestException>(() =>
+            {
+                using (var stream = new HttpWebClientRequestStream(socket.Object, headers))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                }
+            });
+        }
+
+        [Fact]
+        public void TestRequestStreamHeaderWriteThrows()
+        {
+            var socket = new Mock<Stream>();
+            socket.Setup(s => s.Write(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Throws<Exception>();
+
+            Assert.Throws<HttpWebClientRequestException>(() =>
+            {
+                using (var stream = new HttpWebClientRequestStream(socket.Object, new HttpWebClientHeaders()))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                }
+            });
         }
         #endregion
 

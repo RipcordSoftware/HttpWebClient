@@ -30,8 +30,8 @@ namespace RipcordSoftware.HttpWebClient
         #region Private fields
         private readonly HttpWebClientHeaders _headers;
 
-        private RequestStream _requestStream;
-        private ChunkedRequestStream _chunkedStream;
+        private readonly Stream _requestStream;
+        private Stream _chunkedStream;
         #endregion
 
         #region Types
@@ -280,11 +280,14 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Constructor
-        public HttpWebClientRequestStream(IHttpWebClientSocket socket, HttpWebClientHeaders headers)
+        public HttpWebClientRequestStream(IHttpWebClientSocket socket, HttpWebClientHeaders headers) : this(new RequestStream(socket), headers)
         {
-            this._headers = headers;
+        }
 
-            _requestStream = new RequestStream(socket);
+        internal HttpWebClientRequestStream(Stream requestStream, HttpWebClientHeaders headers)
+        {
+            _requestStream = requestStream;
+            _headers = headers;
         }
         #endregion
 
@@ -333,7 +336,7 @@ namespace RipcordSoftware.HttpWebClient
             }
         }
 
-        public override bool CanTimeout { get { return _requestStream != null ? _requestStream.CanTimeout : false; } }
+        public override bool CanTimeout { get { return _requestStream.CanTimeout; } }
 
         public override bool CanRead { get { return false; } }
 
@@ -341,57 +344,61 @@ namespace RipcordSoftware.HttpWebClient
 
         public override bool CanWrite { get { return true; } }
 
-        public override long Length { get { throw new NotImplementedException(); } }
+        public override long Length { get { return _requestStream.Length; } }
 
         public override long Position
         {
             get
             {
-                return _chunkedStream != null ? _chunkedStream.Position : 0;
+                return _requestStream.Position;
             }
             set
             {
                 throw new NotImplementedException();
             }
-        }
-        #endregion
-
-        #region Private and protected methods
-        protected override void Dispose(bool disposing)
+        }        
+        
+        public override void Close()
         {
-            if (disposing && _requestStream != null)
+            try
+            {
+                if (_requestStream.Position == 0)
+                {
+                    _headers["Transfer-Encoding"] = null;
+
+                    if (_headers.Method == "PUT" || _headers.Method == "POST")
+                    {
+                        _headers.ContentLength = 0;
+                    }
+
+                    SendHeaders();
+                }
+            }
+            finally
             {
                 try
-                {
-                    if (_requestStream.Position == 0)
-                    {
-                        _headers["Transfer-Encoding"] = null;
-
-                        if (_headers.Method == "PUT" || _headers.Method == "POST")
-                        {
-                            _headers.ContentLength = 0;
-                        }
-
-                        SendHeaders();
-                    }
-                }
-                finally
                 {
                     if (_chunkedStream != null)
                     {
                         _chunkedStream.Close();
                     }
-                    else
-                    {
-                        _requestStream.Close();
-                    }
 
-                    _chunkedStream = null;
-                    _requestStream = null;
+                    _requestStream.Close();
+                }
+                catch (HttpWebClientException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    var msg = string.Format("Failed to close socket to remote host {0}:{1}", _headers.Hostname, _headers.Port);
+                    throw new HttpWebClientRequestException(msg, ex);
                 }
             }
         }
+        #endregion
 
+        #region Private and protected methods
         private void SendHeaders()
         {
             try

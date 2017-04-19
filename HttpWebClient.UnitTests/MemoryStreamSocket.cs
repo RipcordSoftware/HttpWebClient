@@ -55,7 +55,7 @@ namespace HttpWebClient.UnitTests
         #region Public properties
         public bool Connected => true;
 
-        public int Available => (int)(_responseStream.Length - _responseStream.Position);
+        public int Available { get { return (int)(_responseStream.Length - _responseStream.Position); } }
 
         public int Timeout { get; set; }
         public bool NoDelay { get; set; }
@@ -64,6 +64,8 @@ namespace HttpWebClient.UnitTests
         public IntPtr Handle { get { throw new NotImplementedException(); } }
 
         public string RequestText { get { return _requestText.ToString(); } }
+        public long Position { get { return _requestStream.Position;  } }
+        public long Length { get { return _requestStream.Length; } }
         #endregion
 
         #region Public methods
