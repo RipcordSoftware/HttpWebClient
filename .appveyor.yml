@@ -3,8 +3,9 @@ image: Visual Studio 2017
 
 before_build:
     - nuget restore
-    - nuget install OpenCover -OutputDirectory buildtools
-    - nuget install xunit.runner.console -OutputDirectory buildtools
+    - nuget install xunit.runner.console -Version 2.2.0 -OutputDirectory buildtools
+    - nuget install OpenCover -Version 4.6.519 -OutputDirectory buildtools
+    - nuget install coveralls.net -Version 0.412 -OutputDirectory buildtools
 
 build_script:
     - msbuild /p:Configuration=Debug HttpWebClient.sln
