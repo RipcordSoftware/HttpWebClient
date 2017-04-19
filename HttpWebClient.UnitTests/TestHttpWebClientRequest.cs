@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ using System;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Net.Sockets;
 
 using Xunit;
 
@@ -36,61 +35,6 @@ namespace HttpWebClient.UnitTests
     [ExcludeFromCodeCoverage]
     public class TestHttpWebClientRequest
     {
-        #region Types
-        public class TestSocket : IHttpWebClientSocket
-        {
-            private readonly MemoryStream _responseStream;
-            private readonly MemoryStream _requestStream;
-            private readonly StringBuilder _requestText;
-
-            public TestSocket(string host, int port, int timeout, StringBuilder requestText, string responseText)
-            {
-                _requestText = requestText;
-                _requestStream = new MemoryStream();
-                _responseStream = new MemoryStream(Encoding.ASCII.GetBytes(responseText));
-            }
-
-            public bool Connected => true;
-
-            public int Available => (int)(_responseStream.Length - _responseStream.Position);
-
-            public int Timeout { get; set; }
-            public bool NoDelay { get; set; }
-            public bool ForceClose { protected get; set; }
-
-            public IntPtr Handle { get { throw new NotImplementedException(); } }
-
-            public void Close() { }
-
-            public void Dispose() { }
-
-            public void Flush() { }
-
-            public void KeepAliveOnClose(int? timeout = default(int?)) { }
-
-            public int Receive(byte[] buffer, int offset, int count, bool peek = false, SocketFlags flags = SocketFlags.None)
-            {
-                var read = _responseStream.Read(buffer, offset, count);
-                if (read > 0 && peek)
-                {
-                    _responseStream.Position -= read;
-                }
-
-                return read;
-            }
-
-            public int Send(byte[] buffer, int offset, int count, SocketFlags flags = SocketFlags.None)
-            {
-                _requestText.Append(Encoding.ASCII.GetString(buffer, offset, count));
-
-                _requestStream.Write(buffer, offset, count);
-                return count;
-            }
-
-            public string RequestText { get { return _requestText.ToString(); } }
-        }
-        #endregion
-
         #region Constructor
         public TestHttpWebClientRequest()
         {
@@ -213,7 +157,7 @@ namespace HttpWebClient.UnitTests
             var requestText = new StringBuilder();
             var responseText = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/ascii\r\nConnection: close\r\n\r\nhello world";
 
-            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new MemoryStreamSocket(requestText, responseText); });
 
             var request = new HttpWebClientRequest("http://www.test.com/hello/world");
             using (var response = request.GetResponse())
@@ -247,7 +191,7 @@ namespace HttpWebClient.UnitTests
             var requestText = new StringBuilder();
             var responseText = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/ascii\r\nConnection: close\r\n\r\nhello world";
 
-            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new MemoryStreamSocket(requestText, responseText); });
 
             var request = new HttpWebClientRequest("http://www.test.com/");
             request.Method = "PUT";
@@ -301,7 +245,7 @@ namespace HttpWebClient.UnitTests
             var requestText = new StringBuilder();
             var responseText = "HTTP/1.1 200 OK\r\nContent-Type: text/ascii\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\nb\r\nhello world\r\n0\r\n\r\n";
 
-            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new MemoryStreamSocket(requestText, responseText); });
 
             var request = new HttpWebClientRequest("http://www.test.com/hello/world");
             using (var response = request.GetResponse())
@@ -335,7 +279,7 @@ namespace HttpWebClient.UnitTests
             var requestText = new StringBuilder();
             var responseText = "HTTP/1.1 200 OK\r\nContent-Length: 11\r\nContent-Type: text/ascii\r\nConnection: close\r\n\r\nhello world";
 
-            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new TestSocket((string)h, (int)p, (int)t, requestText, responseText); });
+            HttpWebClientContainer.Register<IHttpWebClientSocket>((h, p, t) => { return new MemoryStreamSocket(requestText, responseText); });
 
             var request = new HttpWebClientRequest("http://www.test.com/");
             request.Method = "PUT";

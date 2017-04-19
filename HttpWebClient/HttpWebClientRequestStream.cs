@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ using System.IO;
 
 namespace RipcordSoftware.HttpWebClient
 {
-    internal class HttpWebClientRequestStream : Stream
+    internal sealed class HttpWebClientRequestStream : Stream
     {
         #region Private fields
         private readonly HttpWebClientHeaders _headers;
@@ -35,7 +35,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Types
-        private class RequestStream : Stream
+        internal sealed class RequestStream : Stream
         {
             #region Private fields
             private readonly IHttpWebClientSocket _socket;
@@ -53,33 +53,18 @@ namespace RipcordSoftware.HttpWebClient
             }
             #endregion
 
-            #region Protected properties
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    Close();
-                }
-            }
-            #endregion
-
             #region implemented abstract members of Stream
             public override void Flush()
             {
                 _socket.Flush();
             }
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-            public override long Seek(long offset, System.IO.SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
+
+            public override int Read(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
+
+            public override long Seek(long offset, System.IO.SeekOrigin origin) { throw new NotImplementedException(); }
+
+            public override void SetLength(long value) { throw new NotImplementedException(); }
+
             public override void Write(byte[] buffer, int offset, int count)
             {
                 try
@@ -107,45 +92,17 @@ namespace RipcordSoftware.HttpWebClient
                     throw new HttpWebClientRequestException("Error sending request", ex);
                 }
             }
-            public override bool CanRead
-            {
-                get
-                {
-                    return false;
-                }
-            }
-            public override bool CanSeek
-            {
-                get
-                {
-                    return false;
-                }
-            }
-            public override bool CanWrite
-            {
-                get
-                {
-                    return true;
-                }
-            }
-            public override long Length
-            {
-                get
-                {
-                    return _position;
-                }
-            }
-            public override long Position
-            {
-                get
-                {
-                    return _position;
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
+            public override bool CanRead { get { return false; } }
+
+            public override bool CanSeek { get { return false; } }
+
+            public override bool CanWrite { get { return true; } }
+
+            public override bool CanTimeout { get { return _socket.Timeout > 0; } }
+
+            public override long Length { get { return _position; } }
+
+            public override long Position { get { return _position; } set { throw new NotImplementedException(); } }
             #endregion
 
             #region Public methods
@@ -180,57 +137,57 @@ namespace RipcordSoftware.HttpWebClient
             #endregion
         }
 
-        private class ChunkedRequestStream : Stream
+        internal sealed class ChunkedRequestStream : Stream
         {
             #region Constants
-            private const int maxRequestChunkSize = 2048;
-            private const string endOfLine = "\r\n";
+            private const int MaxRequestChunkSize = 2048;
+            private const string EndOfLine = "\r\n";
             #endregion
 
             #region Private fields
-            private static byte[] maxBlockSizeHeader = GetChunkHeader(maxRequestChunkSize);
-            private static byte[] endResponseHeader = GetChunkHeader(0);
-            private static byte[] endOfLineBytes = System.Text.Encoding.ASCII.GetBytes(endOfLine);
+            private static readonly byte[] _maxBlockSizeHeader = GetChunkHeader(MaxRequestChunkSize);
+            private static readonly byte[] _endResponseHeader = GetChunkHeader(0);
+            private static readonly byte[] _endOfLineBytes = System.Text.Encoding.ASCII.GetBytes(EndOfLine);
 
-            private readonly byte[] streamBuffer;
+            private readonly byte[] _streamBuffer;
 
-            private RequestStream stream = null;
-            private long position = 0;
+            private RequestStream _stream = null;
+            private long _position = 0;
             #endregion
 
             #region Constructor
             public ChunkedRequestStream(RequestStream stream)
             {
-                this.stream = stream;
+                this._stream = stream;
 
-                streamBuffer = new byte[maxBlockSizeHeader.Length + maxRequestChunkSize + endOfLineBytes.Length];
+                _streamBuffer = new byte[_maxBlockSizeHeader.Length + MaxRequestChunkSize + _endOfLineBytes.Length];
             }
             #endregion
 
             #region Public methods
             public override void Write(byte[] buffer, int offset, int count)
             {
-                var blocks = count / maxRequestChunkSize;
-                var overflow = count % maxRequestChunkSize;
+                var blocks = count / MaxRequestChunkSize;
+                var overflow = count % MaxRequestChunkSize;
 
                 if (blocks > 0)
                 {
                     // copy the chunk header into the stream buffer
-                    Array.Copy(maxBlockSizeHeader, streamBuffer, maxBlockSizeHeader.Length);
+                    Array.Copy(_maxBlockSizeHeader, _streamBuffer, _maxBlockSizeHeader.Length);
 
                     // copy the chunk trailer into the stream buffer
-                    Array.Copy(endOfLineBytes, 0, streamBuffer, streamBuffer.Length - endOfLineBytes.Length, endOfLineBytes.Length);
+                    Array.Copy(_endOfLineBytes, 0, _streamBuffer, _streamBuffer.Length - _endOfLineBytes.Length, _endOfLineBytes.Length);
 
                     for (int i = 0; i < blocks; i++)
                     {
                         // copy in the chunk data
-                        Array.Copy(buffer, offset, streamBuffer, maxBlockSizeHeader.Length, maxRequestChunkSize);
-                        offset += maxRequestChunkSize;
+                        Array.Copy(buffer, offset, _streamBuffer, _maxBlockSizeHeader.Length, MaxRequestChunkSize);
+                        offset += MaxRequestChunkSize;
 
                         // write the buffer
-                        stream.Write(streamBuffer, 0, streamBuffer.Length);
+                        _stream.Write(_streamBuffer, 0, _streamBuffer.Length);
 
-                        position += streamBuffer.Length;
+                        _position += _streamBuffer.Length;
                     }
                 }
 
@@ -240,21 +197,21 @@ namespace RipcordSoftware.HttpWebClient
                     var header = GetChunkHeader(overflow);
 
                     // copy the header into the stream buffer
-                    Array.Copy(header, streamBuffer, header.Length);
+                    Array.Copy(header, _streamBuffer, header.Length);
                     int overflowLength = header.Length;
 
                     // copy the chunk body
-                    Array.Copy(buffer, offset, streamBuffer, overflowLength, overflow);
+                    Array.Copy(buffer, offset, _streamBuffer, overflowLength, overflow);
                     overflowLength += overflow;
 
                     // copy the chunk trailer
-                    Array.Copy(endOfLineBytes, 0, streamBuffer, overflowLength, endOfLineBytes.Length);
-                    overflowLength += endOfLineBytes.Length;
+                    Array.Copy(_endOfLineBytes, 0, _streamBuffer, overflowLength, _endOfLineBytes.Length);
+                    overflowLength += _endOfLineBytes.Length;
 
                     // write the overflow data into the socket
-                    stream.Write(streamBuffer, 0, overflowLength);
+                    _stream.Write(_streamBuffer, 0, overflowLength);
 
-                    position += overflowLength;
+                    _position += overflowLength;
                 }
             }
             #endregion
@@ -262,13 +219,13 @@ namespace RipcordSoftware.HttpWebClient
             #region Protected methods
             protected override void Dispose(bool disposing)
             {
-                if (disposing && stream != null)
+                if (disposing && _stream != null)
                 {
                     // the response finishes with a \r\n
-                    stream.Write(endResponseHeader, 0, endResponseHeader.Length);
+                    _stream.Write(_endResponseHeader, 0, _endResponseHeader.Length);
 
-                    stream.Close();
-                    stream = null;
+                    _stream.Close();
+                    _stream = null;
                 }
             }            
             #endregion
@@ -276,7 +233,7 @@ namespace RipcordSoftware.HttpWebClient
             #region Private methods
             private static byte[] GetChunkHeader(int size)
             {
-                var format = "{0:X}" + endOfLine + (size == 0 ? endOfLine : string.Empty);
+                var format = "{0:X}" + EndOfLine + (size == 0 ? EndOfLine : string.Empty);
                 var text = string.Format(format, size);
                 return System.Text.Encoding.ASCII.GetBytes(text);
             }
@@ -285,64 +242,33 @@ namespace RipcordSoftware.HttpWebClient
             #region implemented abstract members of Stream
             public override void Flush()
             {
-                if (stream != null)
+                if (_stream != null)
                 {
-                    stream.Flush();
+                    _stream.Flush();
                 }
             }
 
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
+            public override int Read(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
 
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
+            public override long Seek(long offset, SeekOrigin origin) { throw new NotImplementedException(); }
 
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
+            public override void SetLength(long value) { throw new NotImplementedException(); }
 
-            public override bool CanRead
-            {
-                get
-                {
-                    return false;
-                }
-            }
+            public override bool CanTimeout { get { return _stream.CanTimeout; } }
 
-            public override bool CanSeek
-            {
-                get
-                {
-                    return false;
-                }
-            }
+            public override bool CanRead { get { return false; } }
 
-            public override bool CanWrite
-            {
-                get
-                {
-                    return true;
-                }
-            }
+            public override bool CanSeek { get { return false; } }
 
-            public override long Length
-            {
-                get
-                {
-                    return position;
-                }
-            }
+            public override bool CanWrite { get { return true; } }
+
+            public override long Length { get { return _position; } }
 
             public override long Position
             {
                 get
                 {
-                    return position;
+                    return _position;
                 }
                 set
                 {
@@ -375,20 +301,11 @@ namespace RipcordSoftware.HttpWebClient
             }
         }
 
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            throw new NotImplementedException();
-        }
+        public override int Read(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
 
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            throw new NotImplementedException();
-        }
+        public override long Seek(long offset, SeekOrigin origin) { throw new NotImplementedException(); }
 
-        public override void SetLength(long value)
-        {
-            throw new NotImplementedException();
-        }
+        public override void SetLength(long value) { throw new NotImplementedException(); }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
@@ -416,37 +333,15 @@ namespace RipcordSoftware.HttpWebClient
             }
         }
 
-        public override bool CanRead
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanTimeout { get { return _requestStream != null ? _requestStream.CanTimeout : false; } }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanRead { get { return false; } }
 
-        public override bool CanWrite
-        {
-            get
-            {
-                return true;
-            }
-        }
+        public override bool CanSeek { get { return false;  } }
 
-        public override long Length
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public override bool CanWrite { get { return true; } }
+
+        public override long Length { get { throw new NotImplementedException(); } }
 
         public override long Position
         {
