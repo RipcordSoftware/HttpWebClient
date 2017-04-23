@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -224,7 +224,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
     }
 
-    internal class HttpWebClientChunkedResponseStream : Stream, IHttpWebClientResponseStream
+    internal sealed class HttpWebClientChunkedResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Types
         private class ChunkHeader
@@ -524,7 +524,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
     }
 
-    internal class HttpWebClientGZipResponseStream : Stream, IHttpWebClientResponseStream
+    internal sealed class HttpWebClientGZipResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
         private GZipStream _stream;
@@ -534,14 +534,28 @@ namespace RipcordSoftware.HttpWebClient
         #region Constructor
         public HttpWebClientGZipResponseStream(Stream baseStream)
         {
-            this._baseStream = baseStream;
-            _stream = new GZipStream(this._baseStream, CompressionMode.Decompress);
+            _baseStream = baseStream;
+            _stream = new GZipStream(_baseStream, CompressionMode.Decompress);
         }
         #endregion
 
         #region implemented abstract members of Stream
+        public override void Close()
+        {
+            Flush();
+            _stream.Close();
+        }
+
         public override void Flush()
         {
+            _stream.Flush();
+        }
+
+        public override int ReadByte()
+        {
+            var buffer = new byte[1];
+            var bytesRead = _stream.Read(buffer, 0, buffer.Length);
+            return bytesRead == 1 ? buffer[0] : -1;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -565,37 +579,13 @@ namespace RipcordSoftware.HttpWebClient
             throw new NotImplementedException();
         }
 
-        public override bool CanRead
-        {
-            get
-            {
-                return true;
-            }
-        }
+        public override bool CanRead { get { return true; } }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanSeek { get { return false; } }
 
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanWrite { get { return false; } }
 
-        public override long Length
-        {
-            get
-            {
-                return _baseStream.Length;
-            }
-        }
+        public override long Length { get { return _baseStream.Length; } }
 
         public override long Position
         {
@@ -662,19 +652,9 @@ namespace RipcordSoftware.HttpWebClient
             return bytes;
         }
         #endregion
-
-        #region Protected methods
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _stream.Dispose();
-            }
-        }
-        #endregion
     }
 
-    internal class HttpWebClientDeflateResponseStream : Stream, IHttpWebClientResponseStream
+    internal sealed class HttpWebClientDeflateResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
         private DeflateStream _stream;
@@ -684,14 +664,28 @@ namespace RipcordSoftware.HttpWebClient
         #region Constructor
         public HttpWebClientDeflateResponseStream(Stream baseStream)
         {
-            this._baseStream = baseStream;
-            _stream = new DeflateStream(this._baseStream, CompressionMode.Decompress);
+            _baseStream = baseStream;
+            _stream = new DeflateStream(_baseStream, CompressionMode.Decompress);
         }
         #endregion
 
         #region implemented abstract members of Stream
+        public override void Close()
+        {
+            Flush();
+            _stream.Close();
+        }
+
         public override void Flush()
         {
+            _stream.Flush();
+        }
+
+        public override int ReadByte()
+        {
+            var buffer = new byte[1];
+            var bytesRead = _stream.Read(buffer, 0, buffer.Length);
+            return bytesRead == 1 ? buffer[0] : -1;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -715,37 +709,13 @@ namespace RipcordSoftware.HttpWebClient
             throw new NotImplementedException();
         }
 
-        public override bool CanRead
-        {
-            get
-            {
-                return true;
-            }
-        }
+        public override bool CanRead { get { return true; } }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanSeek { get { return false; } }
 
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanWrite { get { return false; } }
 
-        public override long Length
-        {
-            get
-            {
-                return _baseStream.Length;
-            }
-        }
+        public override long Length { get { return _baseStream.Length; } }
 
         public override long Position
         {
@@ -810,16 +780,6 @@ namespace RipcordSoftware.HttpWebClient
                 bytes = socketStream.SocketReceive(buffer, offset, count);
             }
             return bytes;
-        }
-        #endregion
-
-        #region Protected methods
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _stream.Dispose();
-            }
         }
         #endregion
     }
