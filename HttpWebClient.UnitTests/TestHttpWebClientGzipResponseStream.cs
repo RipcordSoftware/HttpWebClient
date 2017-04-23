@@ -29,6 +29,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using Xunit;
 using Ionic.Zlib;
+using Moq;
 
 using RipcordSoftware.HttpWebClient;
 
@@ -102,6 +103,32 @@ namespace HttpWebClient.UnitTests
         }
 
         [Fact]
+        public void TestHttpWebClientGzipResponseByByte()
+        {
+            var memStream = new NonDisposibleStream(new MemoryStream());
+
+            using (var gzipStream = new GZipStream(memStream, CompressionMode.Compress))
+            {
+                gzipStream.Write(_testBytes, 0, _testBytes.Length);
+            }
+
+            memStream.Position = 0;
+
+            var response = new List<byte>();
+            using (var stream = new HttpWebClientGZipResponseStream(memStream))
+            {
+                var byteRead = 0;
+                while ((byteRead = stream.ReadByte()) >= 0)
+                {
+                    response.Add((byte)byteRead);
+                }
+            }
+
+            Assert.Equal(_testBytes.Length, response.Count);
+            Assert.True(_testBytes.SequenceEqual(response));
+        }
+
+        [Fact]
         public void TestInitializedDeflateResponseStream()
         {
             using (var stream = new HttpWebClientDeflateResponseStream(new MemoryStream()))
@@ -151,6 +178,82 @@ namespace HttpWebClient.UnitTests
 
             Assert.Equal(_testBytes.Length, response.Count);
             Assert.True(_testBytes.SequenceEqual(response));
+        }
+
+        [Fact]
+        public void TestHttpWebClientDeflateResponseByByte()
+        {
+            var memStream = new NonDisposibleStream(new MemoryStream());
+
+            using (var gzipStream = new DeflateStream(memStream, CompressionMode.Compress))
+            {
+                gzipStream.Write(_testBytes, 0, _testBytes.Length);
+            }
+
+            memStream.Position = 0;
+
+            var response = new List<byte>();
+            using (var stream = new HttpWebClientDeflateResponseStream(memStream))
+            {
+                var byteRead = 0;
+                while ((byteRead = stream.ReadByte()) >= 0)
+                {
+                    response.Add((byte)byteRead);
+                }
+            }
+
+            Assert.Equal(_testBytes.Length, response.Count);
+            Assert.True(_testBytes.SequenceEqual(response));
+        }
+
+        [Fact]
+        public void TestInitializedGzipResponseStreamWithMockedSocketStream()
+        {
+            var mock = new Mock<Stream>();
+            var mockResponseStream = mock.As<IHttpWebClientResponseStream>();
+            mockResponseStream.Setup(s => s.Available).Returns(42);
+            mockResponseStream.Setup(s => s.SocketAvailable).Returns(69);
+            mockResponseStream.Setup(s => s.BufferAvailable).Returns(7);
+            mockResponseStream.SetupSet(s => s.SocketForceClose = true);
+            mockResponseStream.Setup(s => s.SocketReceive(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(128);
+
+            using (var stream = new HttpWebClientGZipResponseStream(mock.Object))
+            {
+                Assert.Equal(42, stream.Available);
+                Assert.Equal(69, stream.SocketAvailable);
+                Assert.Equal(7, stream.BufferAvailable);
+
+                stream.SocketForceClose = true;
+
+                Assert.Equal(128, stream.SocketReceive(new byte[256], 0, 256));
+            }
+
+            mockResponseStream.VerifyAll();
+        }
+
+        [Fact]
+        public void TestInitializedDeflateResponseStreamWithMockedSocketStream()
+        {
+            var mock = new Mock<Stream>();
+            var mockResponseStream = mock.As<IHttpWebClientResponseStream>();
+            mockResponseStream.Setup(s => s.Available).Returns(42);
+            mockResponseStream.Setup(s => s.SocketAvailable).Returns(69);
+            mockResponseStream.Setup(s => s.BufferAvailable).Returns(7);
+            mockResponseStream.SetupSet(s => s.SocketForceClose = true);
+            mockResponseStream.Setup(s => s.SocketReceive(It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(128);
+
+            using (var stream = new HttpWebClientDeflateResponseStream(mock.Object))
+            {
+                Assert.Equal(42, stream.Available);
+                Assert.Equal(69, stream.SocketAvailable);
+                Assert.Equal(7, stream.BufferAvailable);
+
+                stream.SocketForceClose = true;
+
+                Assert.Equal(128, stream.SocketReceive(new byte[256], 0, 256));
+            }
+
+            mockResponseStream.VerifyAll();
         }
         #endregion
     }
