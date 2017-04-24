@@ -214,12 +214,10 @@ namespace RipcordSoftware.HttpWebClient
                     _position += overflowLength;
                 }
             }
-            #endregion
 
-            #region Protected methods
-            protected override void Dispose(bool disposing)
+            public override void Close()
             {
-                if (disposing && _stream != null)
+                if (_stream != null)
                 {
                     // the response finishes with a \r\n
                     _stream.Write(_endResponseHeader, 0, _endResponseHeader.Length);
@@ -227,7 +225,7 @@ namespace RipcordSoftware.HttpWebClient
                     _stream.Close();
                     _stream = null;
                 }
-            }            
+            }        
             #endregion
 
             #region Private methods

@@ -276,37 +276,13 @@ namespace RipcordSoftware.HttpWebClient
             throw new NotImplementedException();
         }
 
-        public override bool CanRead
-        {
-            get
-            {
-                return true;
-            }
-        }
+        public override bool CanRead {  get { return true; } }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanSeek { get { return false; } }
 
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
+        public override bool CanWrite { get { return false; } }
 
-        public override long Length
-        {
-            get
-            {
-                return _length;
-            }
-        }
+        public override long Length { get { return _length; } }
 
         public override long Position
         {
@@ -322,7 +298,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Public methods
-        protected override void Dispose(bool disposing)
+        public override void Close()
         {
             if (_stream != null)
             {

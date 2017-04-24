@@ -21,12 +21,9 @@
 // SOFTWARE.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Text;
 
 using Xunit;
 using Moq;
@@ -38,9 +35,61 @@ namespace HttpWebClient.UnitTests
     [ExcludeFromCodeCoverage]
     public class TestHttpWebClientChunkedResponseStream
     {
+        private const string TestChunkedText = "16\r\nhello worldhello world\r\nB\r\nhello world\r\n0\r\n\r\n";
+        private static readonly byte[] _textChunkedBytes = Encoding.ASCII.GetBytes(TestChunkedText);
+
         [Fact]
         public void TestInitializedHttpWebClientChunkedResponseStream()
         {
+            var socket = new MemoryStreamSocket();
+            var memStream = new MemoryStream();
+
+            using (var responseStream = new HttpWebClientResponseStream(socket, memStream))
+            {
+                using (var stream = new HttpWebClientChunkedResponseStream(responseStream))
+                {
+                    Assert.True(stream.CanRead);
+                    Assert.False(stream.CanWrite);
+                    Assert.False(stream.CanSeek);
+                    Assert.False(stream.CanTimeout);
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                    Assert.Equal(0, stream.Available);
+                    Assert.Equal(0, stream.SocketAvailable);
+                    Assert.Equal(0, stream.BufferAvailable);
+                    Assert.Equal(0, stream.Read(new byte[256], 0, 256));
+                    Assert.Equal(-1, stream.ReadByte());
+                    Assert.Equal(0, stream.SocketReceive(new byte[256], 0, 256));
+
+                    Assert.Throws<NotImplementedException>(() => stream.Seek(100, SeekOrigin.End));
+                    Assert.Throws<NotImplementedException>(() => stream.SetLength(1024));
+                    Assert.Throws<NotImplementedException>(() => stream.Write(new byte[256], 0, 256));
+                    Assert.Throws<NotImplementedException>(() => { stream.Position = 1024; });
+                }
+            }
+        }
+
+        [Fact]
+        public void TestHttpWebClientChunkedResponseStreamRead()
+        {
+            var socket = new MemoryStreamSocket();
+            var memStream = new MemoryStream(_textChunkedBytes);
+
+            using (var responseStream = new HttpWebClientResponseStream(socket, memStream))
+            {
+                using (var stream = new HttpWebClientChunkedResponseStream(responseStream))
+                {
+                    Assert.Equal(0, stream.Length);
+                    Assert.Equal(0, stream.Position);
+                    Assert.Equal(_textChunkedBytes.Length, stream.Available);
+                    Assert.Equal(0, stream.SocketAvailable);
+                    Assert.Equal(_textChunkedBytes.Length, stream.BufferAvailable);
+                    Assert.Equal(22, stream.Read(new byte[256], 0, 256));
+                    Assert.Equal(11, stream.Read(new byte[256], 0, 256));
+                    Assert.Equal(-1, stream.ReadByte());
+                    Assert.Equal(0, stream.SocketReceive(new byte[256], 0, 256));
+                }
+            }
         }
     }
 }
