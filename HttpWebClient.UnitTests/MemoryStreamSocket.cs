@@ -59,7 +59,7 @@ namespace HttpWebClient.UnitTests
 
         public int Timeout { get; set; }
         public bool NoDelay { get; set; }
-        public bool ForceClose { protected get; set; }
+        public bool ForceClose { get; set; }
 
         public IntPtr Handle { get { throw new NotImplementedException(); } }
 

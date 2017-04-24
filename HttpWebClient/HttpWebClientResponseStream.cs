@@ -37,7 +37,7 @@ namespace RipcordSoftware.HttpWebClient
         int SocketReceive(byte[] buffer, int offset, int count);
     }
 
-    internal class HttpWebClientResponseStream : Stream, IHttpWebClientResponseStream
+    internal sealed class HttpWebClientResponseStream : Stream, IHttpWebClientResponseStream
     {
         #region Private fields
         private IHttpWebClientSocket _socket;
@@ -49,7 +49,7 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Constructor
-        public HttpWebClientResponseStream(IHttpWebClientSocket socket, MemoryStream memStream, long? length)
+        public HttpWebClientResponseStream(IHttpWebClientSocket socket, MemoryStream memStream, long? length = null)
         {
             _socket = socket;
             _memStream = memStream;
@@ -58,6 +58,16 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region implemented abstract members of Stream
+        public override void Close()
+        {
+            if (_socket != null)
+            {
+                Flush();
+                _socket.Close();
+                _socket = null;
+            }
+        }
+
         public override void Flush()
         {
         }
@@ -79,34 +89,14 @@ namespace RipcordSoftware.HttpWebClient
         {
             throw new NotImplementedException();
         }
-        public override bool CanRead
-        {
-            get
-            {
-                return true;
-            }
-        }
-        public override bool CanSeek
-        {
-            get
-            {
-                return false;
-            }
-        }
-        public override bool CanWrite
-        {
-            get
-            {
-                return false;
-            }
-        }
-        public override long Length
-        {
-            get
-            {
-                return _length.HasValue ? _length.Value : _position;
-            }
-        }
+        public override bool CanRead { get { return true; } }
+
+        public override bool CanSeek { get { return false; } }
+
+        public override bool CanWrite { get { return false; } }
+
+        public override long Length { get { return _length.HasValue ? _length.Value : _position; } }
+
         public override long Position
         {
             get
@@ -150,7 +140,7 @@ namespace RipcordSoftware.HttpWebClient
                 count -= size;
             }
 
-            if ((size == 0 || _socket.Available > 0) && count > 0 && _position < wantLength)
+            if (_socket != null && (size == 0 || _socket.Available > 0) && count > 0 && _position < wantLength)
             {
                 var received = _socket.Receive(buffer, offset, count, peek);
                 size += received;
@@ -165,56 +155,14 @@ namespace RipcordSoftware.HttpWebClient
         }
         #endregion
 
-        #region Protected methods
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                if (_socket != null)
-                {
-                    _socket.Close();
-                    _socket = null;
-                }
-            }
-
-            base.Dispose(disposing);
-        }
-        #endregion
-
         #region IHttpWebClientResponseStream implementation
-        public int Available
-        {
-            get
-            {
-                return BufferAvailable + SocketAvailable;
-            }
-        }
+        public int Available { get { return BufferAvailable + SocketAvailable; } }
 
-        public int SocketAvailable
-        {
-            get
-            {
-                return _socket != null ? _socket.Available : 0;
-            }
-        }
+        public int SocketAvailable { get { return _socket != null ? _socket.Available : 0; } }
 
-        public int BufferAvailable
-        {
-            get
-            {
-                return _memStream != null ? (int)(_memStream.Length - _memStream.Position) : 0;
-            }
-        }
+        public int BufferAvailable { get { return _memStream != null ? (int)(_memStream.Length - _memStream.Position) : 0; } }
 
-        public bool SocketForceClose
-        {
-            set
-            {
-                if (_socket != null)
-                {
-                    _socket.ForceClose = value;
-                }
-            }
+        public bool SocketForceClose { set { if (_socket != null) { _socket.ForceClose = value; } }
         }
             
         public int SocketReceive(byte[] buffer, int offset, int count)

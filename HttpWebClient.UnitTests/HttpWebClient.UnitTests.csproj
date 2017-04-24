@@ -70,12 +70,14 @@
   <ItemGroup>
     <Compile Include="MemoryStreamSocket.cs" />
     <Compile Include="NonDisposibleStream.cs" />
+    <Compile Include="TestHttpWebClientChunkedResponseStream.cs" />
     <Compile Include="TestHttpWebClientContainer.cs" />
     <Compile Include="TestHttpWebClientGzipResponseStream.cs" />
     <Compile Include="TestHttpWebClientHeaders.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestHttpWebClientRequest.cs" />
     <Compile Include="TestHttpWebClientRequestStream.cs" />
+    <Compile Include="TestHttpWebClientResponseStream.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HttpWebClient\HttpWebClient.csproj">
