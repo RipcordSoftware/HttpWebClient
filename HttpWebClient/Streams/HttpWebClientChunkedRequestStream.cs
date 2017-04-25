@@ -46,7 +46,8 @@ namespace RipcordSoftware.HttpWebClient
         #region Constructor
         public HttpWebClientChunkedRequestStream(Stream stream)
         {
-            this._stream = stream;
+            _stream = stream;
+            _position = stream.Position;
 
             _streamBuffer = new byte[_maxBlockSizeHeader.Length + MaxRequestChunkSize + _endOfLineBytes.Length];
         }

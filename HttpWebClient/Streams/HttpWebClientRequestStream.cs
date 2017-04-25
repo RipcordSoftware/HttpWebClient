@@ -30,8 +30,7 @@ namespace RipcordSoftware.HttpWebClient
         #region Private fields
         private readonly HttpWebClientHeaders _headers;
 
-        private readonly Stream _requestStream;
-        private Stream _chunkedStream;
+        private Stream _stream;
         #endregion
 
         #region Types
@@ -143,9 +142,9 @@ namespace RipcordSoftware.HttpWebClient
         {
         }
 
-        internal HttpWebClientRequestStream(Stream requestStream, HttpWebClientHeaders headers)
+        internal HttpWebClientRequestStream(Stream stream, HttpWebClientHeaders headers)
         {
-            _requestStream = requestStream;
+            _stream = stream;
             _headers = headers;
         }
         #endregion
@@ -153,14 +152,7 @@ namespace RipcordSoftware.HttpWebClient
         #region Implemented abstract members of Stream
         public override void Flush()
         {
-            if (_chunkedStream != null)
-            {
-                _chunkedStream.Flush();
-            }
-            else if (_requestStream != null)
-            {
-                _requestStream.Flush();
-            }
+            _stream.Flush();
         }
 
         public override int Read(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
@@ -171,31 +163,25 @@ namespace RipcordSoftware.HttpWebClient
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (_requestStream != null)
+            if (_stream.Position == 0)
             {
-                if (_requestStream.Position == 0)
+                if (!_headers.ContentLength.HasValue)
                 {
-                    if (!_headers.ContentLength.HasValue)
-                    {
-                        _headers["Transfer-Encoding"] = "chunked";
-                        _chunkedStream = new HttpWebClientChunkedRequestStream(_requestStream);
-                    }
-
+                    _headers["Transfer-Encoding"] = "chunked";
                     SendHeaders();
-                }
 
-                if (_chunkedStream != null)
-                {
-                    _chunkedStream.Write(buffer, offset, count);
+                    _stream = new HttpWebClientChunkedRequestStream(_stream);
                 }
                 else
                 {
-                    _requestStream.Write(buffer, offset, count);
+                    SendHeaders();
                 }
             }
+
+            _stream.Write(buffer, offset, count);
         }
 
-        public override bool CanTimeout { get { return _requestStream.CanTimeout; } }
+        public override bool CanTimeout { get { return _stream.CanTimeout; } }
 
         public override bool CanRead { get { return false; } }
 
@@ -203,13 +189,13 @@ namespace RipcordSoftware.HttpWebClient
 
         public override bool CanWrite { get { return true; } }
 
-        public override long Length { get { return _requestStream.Length; } }
+        public override long Length { get { return _stream.Length; } }
 
         public override long Position
         {
             get
             {
-                return _requestStream.Position;
+                return _stream.Position;
             }
             set
             {
@@ -221,7 +207,7 @@ namespace RipcordSoftware.HttpWebClient
         {
             try
             {
-                if (_requestStream.Position == 0)
+                if (_stream.Position == 0)
                 {
                     _headers["Transfer-Encoding"] = null;
 
@@ -237,12 +223,7 @@ namespace RipcordSoftware.HttpWebClient
             {
                 try
                 {
-                    if (_chunkedStream != null)
-                    {
-                        _chunkedStream.Close();
-                    }
-
-                    _requestStream.Close();
+                    _stream.Close();
                 }
                 catch (HttpWebClientException)
                 {
@@ -263,7 +244,7 @@ namespace RipcordSoftware.HttpWebClient
             try
             {
                 var bytes = _headers.GetHeaderBytes();
-                _requestStream.Write(bytes, 0, bytes.Length);
+                _stream.Write(bytes, 0, bytes.Length);
             }
             catch (Exception ex)
             {
