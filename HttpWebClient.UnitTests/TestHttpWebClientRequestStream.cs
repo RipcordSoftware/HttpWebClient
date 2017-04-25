@@ -155,7 +155,7 @@ namespace HttpWebClient.UnitTests
         [Fact]
         public void TestInitializedChunkedRequestStream()
         {
-            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(new MemoryStream()))
+            using (var stream = new HttpWebClientChunkedRequestStream(new MemoryStream()))
             {
                 Assert.False(stream.CanRead);
                 Assert.True(stream.CanWrite);
@@ -178,7 +178,7 @@ namespace HttpWebClient.UnitTests
             var memStream = new NonDisposibleStream(new MemoryStream());
             var position = 0;
 
-            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(memStream))
+            using (var stream = new HttpWebClientChunkedRequestStream(memStream))
             {
                 Assert.Equal(0, stream.Length);
                 Assert.Equal(0, stream.Position);
@@ -216,7 +216,7 @@ namespace HttpWebClient.UnitTests
             var chunkInfo = CalculateChunkInfo(_buffer.Length);
             var memStream = new NonDisposibleStream(new MemoryStream());
 
-            using (var stream = new HttpWebClientRequestStream.ChunkedRequestStream(memStream))
+            using (var stream = new HttpWebClientChunkedRequestStream(memStream))
             {
                 Assert.Equal(0, stream.Length);
                 Assert.Equal(0, stream.Position);
@@ -453,10 +453,10 @@ namespace HttpWebClient.UnitTests
         #region Private methods
         private static ChunkedRequestInfo CalculateChunkInfo(int written)
         {
-            var chunks = written / HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize;
-            var padding = chunks * (HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize.ToString("X").Length + 4);
+            var chunks = written / HttpWebClientChunkedRequestStream.MaxRequestChunkSize;
+            var padding = chunks * (HttpWebClientChunkedRequestStream.MaxRequestChunkSize.ToString("X").Length + 4);
 
-            var lastChunkSize = written % HttpWebClientRequestStream.ChunkedRequestStream.MaxRequestChunkSize;
+            var lastChunkSize = written % HttpWebClientChunkedRequestStream.MaxRequestChunkSize;
             chunks += lastChunkSize > 0 ? 1 : 0;
 
             padding += lastChunkSize > 0 ? lastChunkSize.ToString("X").Length + 2 : 0;

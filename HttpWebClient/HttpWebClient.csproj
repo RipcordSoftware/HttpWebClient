@@ -35,13 +35,19 @@
   <ItemGroup>
     <Compile Include="HttpWebClientBootstrap.cs" />
     <Compile Include="HttpWebClientContainer.cs" />
+    <Compile Include="Interfaces\IHttpWebClientResponseStream.cs" />
+    <Compile Include="Interfaces\IHttpWebClientSocket.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HttpWebClientException.cs" />
     <Compile Include="HttpWebClientHeaders.cs" />
     <Compile Include="HttpWebClientRequest.cs" />
-    <Compile Include="HttpWebClientRequestStream.cs" />
+    <Compile Include="Streams\HttpWebClientChunkedRequestStream.cs" />
+    <Compile Include="Streams\HttpWebClientChunkedResponseStream.cs" />
+    <Compile Include="Streams\HttpWebClientDeflateResponseStream.cs" />
+    <Compile Include="Streams\HttpWebClientGZipResponseStream.cs" />
+    <Compile Include="Streams\HttpWebClientRequestStream.cs" />
     <Compile Include="HttpWebClientResponse.cs" />
-    <Compile Include="HttpWebClientResponseStream.cs" />
+    <Compile Include="Streams\HttpWebClientResponseStream.cs" />
     <Compile Include="HttpWebClientSocket.cs" />
     <Compile Include="HttpWebClientSocketCache.cs" />
     <Compile Include="HttpWebClientStatusCode.cs" />
@@ -49,5 +55,6 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

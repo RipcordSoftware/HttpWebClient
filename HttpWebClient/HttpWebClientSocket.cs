@@ -25,25 +25,6 @@ using System.Net.Sockets;
 
 namespace RipcordSoftware.HttpWebClient
 {
-    public interface IHttpWebClientSocket : IDisposable
-    {
-        void Flush();
-
-        void Close();
-
-        void KeepAliveOnClose(int? timeout = null);
-
-        int Receive(byte[] buffer, int offset, int count, bool peek = false, SocketFlags flags = SocketFlags.None);
-
-        int Send(byte[] buffer, int offset, int count, SocketFlags flags = SocketFlags.None);
-
-        bool Connected { get; }
-        int Available { get; }
-        int Timeout { get; set; }
-        bool NoDelay { get; set; }
-        bool ForceClose { set; }
-    }
-
     public class HttpWebClientSocket : IHttpWebClientSocket
     {
         #region Types
