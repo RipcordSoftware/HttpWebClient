@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,19 +28,19 @@ namespace RipcordSoftware.HttpWebClient
     internal static class HttpWebClientSocketCache
     {
         #region Private fields
-        private static ConcurrentDictionary<string, ConcurrentQueue<HttpWebClientSocket.Socket>> _socketCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpWebClientSocket.Socket>>();
+        private static ConcurrentDictionary<string, ConcurrentQueue<HttpWebClientSocket.TcpSocket>> _socketCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpWebClientSocket.TcpSocket>>();
         #endregion
 
         #region Public methods
-        public static HttpWebClientSocket.Socket GetSocket(string hostname, int port, int timeout)
+        public static HttpWebClientSocket.TcpSocket GetSocket(string hostname, int port, int timeout)
         {
-            HttpWebClientSocket.Socket socket = null;
+            HttpWebClientSocket.TcpSocket socket = null;
             var key = MakeKey(hostname, port);
 
-            ConcurrentQueue<HttpWebClientSocket.Socket> socketQueue;
+            ConcurrentQueue<HttpWebClientSocket.TcpSocket> socketQueue;
             if (_socketCache.TryGetValue(key, out socketQueue))
             {
-                HttpWebClientSocket.Socket temp = null;
+                HttpWebClientSocket.TcpSocket temp = null;
                 while (socketQueue.Count > 0 && socketQueue.TryDequeue(out temp))
                 {
                     if (!temp.IsKeepAliveExpired && temp.Connected)
@@ -57,7 +57,7 @@ namespace RipcordSoftware.HttpWebClient
             return socket;
         }
 
-        public static void ReleaseSocket(HttpWebClientSocket.Socket socket)
+        public static void ReleaseSocket(HttpWebClientSocket.TcpSocket socket)
         {
             bool released = false;
 
@@ -65,10 +65,10 @@ namespace RipcordSoftware.HttpWebClient
             {
                 var key = MakeKey(socket.Hostname, socket.Port);
 
-                ConcurrentQueue<HttpWebClientSocket.Socket> socketQueue;
+                ConcurrentQueue<HttpWebClientSocket.TcpSocket> socketQueue;
                 if (!_socketCache.TryGetValue(key, out socketQueue))
                 {
-                    socketQueue = new ConcurrentQueue<HttpWebClientSocket.Socket>();
+                    socketQueue = new ConcurrentQueue<HttpWebClientSocket.TcpSocket>();
                     if (!_socketCache.TryAdd(key, socketQueue))
                     {
                         socketQueue = null;

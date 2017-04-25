@@ -1,6 +1,6 @@
-﻿//The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
-//Copyright(c) 2015-2017 Ripcord Software Ltd
+// Copyright(c) 2015-2017 Ripcord Software Ltd
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using System;
+using System.Net.Sockets;
 
 namespace RipcordSoftware.HttpWebClient
 {
@@ -32,25 +33,24 @@ namespace RipcordSoftware.HttpWebClient
 
         void KeepAliveOnClose(int? timeout = null);
 
-        int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None);
+        int Receive(byte[] buffer, int offset, int count, bool peek = false, SocketFlags flags = SocketFlags.None);
 
-        int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None);
+        int Send(byte[] buffer, int offset, int count, SocketFlags flags = SocketFlags.None);
 
         bool Connected { get; }
         int Available { get; }
         int Timeout { get; set; }
         bool NoDelay { get; set; }
         bool ForceClose { set; }
-        IntPtr Handle { get; }
     }
 
     public class HttpWebClientSocket : IHttpWebClientSocket
     {
         #region Types
-        protected internal class Socket : IDisposable
+        protected internal class TcpSocket : IDisposable
         {
             #region Private fields
-            private System.Net.Sockets.Socket _socket;
+            private Socket _socket;
 
             private int _timeout;
 
@@ -60,7 +60,7 @@ namespace RipcordSoftware.HttpWebClient
             #endregion
 
             #region Constructor
-            public Socket(string hostname, int port, int timeout = 30000)
+            public TcpSocket(string hostname, int port, int timeout = 30000)
             {
                 Hostname = hostname;
                 Port = port;
@@ -84,13 +84,13 @@ namespace RipcordSoftware.HttpWebClient
                 }
             }
 
-            public int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
+            public int Receive(byte[] buffer, int offset, int count, bool peek = false, SocketFlags flags = SocketFlags.None)
             {
-                flags |= peek ? System.Net.Sockets.SocketFlags.Peek : System.Net.Sockets.SocketFlags.None;
+                flags |= peek ? SocketFlags.Peek : SocketFlags.None;
                 return _socket.Receive(buffer, offset, count, flags);
             }
 
-            public int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
+            public int Send(byte[] buffer, int offset, int count, SocketFlags flags = SocketFlags.None)
             {
                 return _socket.Send(buffer, offset, count, flags);
             }
@@ -132,8 +132,6 @@ namespace RipcordSoftware.HttpWebClient
             public bool IsKeepAliveExpired { get { return _keepAliveTimeout.HasValue ? (_keepAliveStarted + _keepAliveTimeout) < Now : false; } }
 
             public bool NoDelay { get { return _socket.NoDelay; } set { _socket.NoDelay = value; } }
-
-            public IntPtr Handle { get { return _socket.Handle; } }
             #endregion
 
             #region Private properties
@@ -141,10 +139,10 @@ namespace RipcordSoftware.HttpWebClient
             #endregion
 
             #region Private methods
-            private static System.Net.Sockets.Socket NewSocket(string hostname, int port)
+            private static Socket NewSocket(string hostname, int port)
             {
-                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                socket.SetSocketOption(System.Net.Sockets.SocketOptionLevel.Socket, System.Net.Sockets.SocketOptionName.KeepAlive, true);
+                var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                 return socket;
             }
             #endregion
@@ -159,19 +157,19 @@ namespace RipcordSoftware.HttpWebClient
         #endregion
 
         #region Private fields
-        private Socket _socket;
+        private TcpSocket _socket;
         private bool _forceClose = false;
         #endregion
 
         #region Contructor
         protected HttpWebClientSocket(string hostname, int port, int timeout = 30000)
         {
-            _socket = new Socket(hostname, port, timeout);
+            _socket = new TcpSocket(hostname, port, timeout);
         }
 
-        protected internal HttpWebClientSocket(HttpWebClientSocket.Socket socket)
+        protected internal HttpWebClientSocket(HttpWebClientSocket.TcpSocket socket)
         {
-            this._socket = socket;
+            _socket = socket;
         }
         #endregion
 
@@ -201,12 +199,12 @@ namespace RipcordSoftware.HttpWebClient
             _socket.Flush();
         }
 
-        public int Receive(byte[] buffer, int offset, int count, bool peek = false, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
+        public int Receive(byte[] buffer, int offset, int count, bool peek = false, SocketFlags flags = SocketFlags.None)
         {
             return _socket.Receive(buffer, offset, count, peek, flags);
         }
 
-        public int Send(byte[] buffer, int offset, int count, System.Net.Sockets.SocketFlags flags = System.Net.Sockets.SocketFlags.None)
+        public int Send(byte[] buffer, int offset, int count, SocketFlags flags = SocketFlags.None)
         {
             return _socket.Send(buffer, offset, count, flags);
         }
@@ -250,8 +248,6 @@ namespace RipcordSoftware.HttpWebClient
         public bool NoDelay { get { return _socket.NoDelay; } set { _socket.NoDelay = value; } }
 
         public bool ForceClose { set { _forceClose = value; } }
-
-        public IntPtr Handle { get { return _socket.Handle; } }
         #endregion
 
         #region IDisposable implementation
